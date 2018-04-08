@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include "cuda_helper.h"
+#include "cuda_helper_alexis.h"
 
 extern __device__ __device_builtin__ void __threadfence_block(void);
 
@@ -315,5 +315,5 @@ void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 	dim3 block(threadsperblock);
 
 	x11_echo512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-	MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, order, thr_id);
 }

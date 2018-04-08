@@ -195,11 +195,14 @@ static inline uint32_t le32dec(const void *pp)
 #if !HAVE_DECL_BE32ENC
 static inline void be32enc(void *pp, uint32_t x)
 {
+	/*
 	uint8_t *p = (uint8_t *)pp;
 	p[3] = x & 0xff;
 	p[2] = (x >> 8) & 0xff;
 	p[1] = (x >> 16) & 0xff;
 	p[0] = (x >> 24) & 0xff;
+	*/
+	*(uint32_t*)pp = ((x >> 24) & 0x00000000ff) | ((x << 8) & 0x00ff0000) | ((x >> 8) & 0x0000ff00) | ((x << 24) & 0xff000000);
 }
 #endif
 
@@ -322,12 +325,12 @@ extern int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce, uns
 extern int scanhash_wildkeccak(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x11evo(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x11(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
-extern int scanhash_x12(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x14(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x15(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+
+
 extern int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
-extern int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x17(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_zr5(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 
@@ -389,12 +392,10 @@ extern void free_whirl(int thr_id);
 extern void free_wildkeccak(int thr_id);
 extern void free_x11evo(int thr_id);
 extern void free_x11(int thr_id);
-extern void free_x12(int thr_id);
 extern void free_x13(int thr_id);
 extern void free_x14(int thr_id);
 extern void free_x15(int thr_id);
 extern void free_x16r(int thr_id);
-extern void free_x16s(int thr_id);
 extern void free_x17(int thr_id);
 extern void free_zr5(int thr_id);
 //extern void free_sha256d(int thr_id);
@@ -756,6 +757,7 @@ struct pool_infos {
 #define POOL_GETWORK  1
 #define POOL_STRATUM  2
 #define POOL_LONGPOLL 4
+#define POOL_DONATE		8
 	uint8_t type;
 #define POOL_ST_DEFINED 1
 #define POOL_ST_VALID 2
@@ -805,7 +807,7 @@ void pool_set_attr(int pooln, const char* key, char* arg);
 bool pool_switch_url(char *params);
 bool pool_switch(int thr_id, int pooln);
 bool pool_switch_next(int thr_id);
-int pool_get_first_valid(int startfrom);
+int pool_get_first_valid(int startfrom, bool donate);
 bool parse_pool_array(json_t *obj);
 void pool_dump_infos(void);
 
@@ -936,12 +938,10 @@ void wcoinhash(void *state, const void *input);
 void whirlxHash(void *state, const void *input);
 void x11evo_hash(void *output, const void *input);
 void x11hash(void *output, const void *input);
-void x12hash(void *output, const void *input);
 void x13hash(void *output, const void *input);
 void x14hash(void *output, const void *input);
 void x15hash(void *output, const void *input);
 void x16r_hash(void *output, const void *input);
-void x16s_hash(void *output, const void *input);
 void x17hash(void *output, const void *input);
 void wildkeccak_hash(void *output, const void *input, uint64_t* scratchpad, uint64_t ssize);
 void zr5hash(void *output, const void *input);

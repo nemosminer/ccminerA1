@@ -2148,7 +2148,7 @@ void do_gpu_tests(void)
 	opt_tracegpu = false;
 #endif
 }
-
+#if 0
 void print_hash_tests(void)
 {
 	uchar *scratchbuf = NULL;
@@ -2314,28 +2314,22 @@ void print_hash_tests(void)
 	printpfx("x11evo", hash);
 
 	x11hash(&hash[0], &buf[0]);
-	printpfx("x11", hash);
-
-	x12hash(&hash[0], &buf[0]);
-	printpfx("x12", hash);
+	printpfx("X11", hash);
 
 	x13hash(&hash[0], &buf[0]);
-	printpfx("x13", hash);
+	printpfx("X13", hash);
 
 	x14hash(&hash[0], &buf[0]);
-	printpfx("x14", hash);
+	printpfx("X14", hash);
 
 	x15hash(&hash[0], &buf[0]);
-	printpfx("x15", hash);
+	printpfx("X15", hash);
 
 	x16r_hash(&hash[0], &buf[0]);
-	printpfx("x16r", hash);
-
-	x16s_hash(&hash[0], &buf[0]);
-	printpfx("x16s", hash);
+	printpfx("X16r", hash);
 
 	x17hash(&hash[0], &buf[0]);
-	printpfx("x17", hash);
+	printpfx("X17", hash);
 
 	//memcpy(buf, zrtest, 80);
 	zr5hash(&hash[0], &buf[0]);
@@ -2348,3 +2342,4 @@ void print_hash_tests(void)
 
 	free(scratchbuf);
 }
+#endif

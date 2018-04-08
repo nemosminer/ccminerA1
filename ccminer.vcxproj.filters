@@ -58,7 +58,7 @@
     <Filter Include="Source Files\CUDA\x15">
       <UniqueIdentifier>{a2403c22-6777-46ab-a55a-3fcc7386c974}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\CUDA\x16">
+    <Filter Include="Source Files\CUDA\x16r">
       <UniqueIdentifier>{55dfae6a-66ba-43e2-8ceb-98ee70cbdf16}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\CUDA\x17">
@@ -114,9 +114,6 @@
     </Filter>
     <Filter Include="Source Files\CUDA\tribus">
       <UniqueIdentifier>{1e548d79-c217-4203-989a-a592fe2b2de3}</UniqueIdentifier>
-    </Filter>
-        <Filter Include="Source Files\CUDA\x12">
-      <UniqueIdentifier>{xde48d89-fx12-1323-129a-b592fe2b2de3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -515,12 +512,6 @@
     <ClInclude Include="lyra2\Sponge.h">
       <Filter>Header Files\lyra2</Filter>
     </ClInclude>
-    <ClInclude Include="quark\groestl_transf_quad.h">
-      <Filter>Source Files\CUDA\quark</Filter>
-    </ClInclude>
-    <ClInclude Include="quark\groestl_functions_quad.h">
-      <Filter>Source Files\CUDA\quark</Filter>
-    </ClInclude>
     <ClInclude Include="res\resource.h">
       <Filter>Ressources</Filter>
     </ClInclude>
@@ -602,9 +593,24 @@
     <ClInclude Include="equi\equihash.h">
       <Filter>Source Files\equi</Filter>
     </ClInclude>
-    <ClInclude Include="x16\cuda_x16.h">
+    <ClInclude Include="x16r\cuda_x16r.h">
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="x11\cuda_x11_aes_alexis.cuh">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </ClInclude>
+    <ClInclude Include="x11\cuda_x11_echo_aes.cuh">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </ClInclude>
+    <ClInclude Include="quark\groestl_simple.cuh" />
+    <ClInclude Include="quark\groestl_transf_quad.h">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </ClInclude>
+    <ClInclude Include="quark\groestl_functions_quad.h">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </ClInclude>
+    <ClInclude Include="quark\groestl_functions_quad_a1_min3r.cuh" />
+    <ClInclude Include="quark\groestl_transf_quad_a1_min3r.cuh" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">
@@ -814,9 +820,6 @@
     <CudaCompile Include="x11\s3.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
-    <CudaCompile Include="x12\x12.cu">
-      <Filter>Source Files\CUDA\x12</Filter>
-    </CudaCompile>
     <CudaCompile Include="x11\timetravel.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
@@ -982,32 +985,43 @@
     <CudaCompile Include="x15\cuda_x15_whirlpool_sm3.cu">
       <Filter>Source Files\CUDA\x15</Filter>
     </CudaCompile>
-    <CudaCompile Include="x16\cuda_x16_echo512.cu">
-      <Filter>Source Files\CUDA\x16</Filter>
+    <CudaCompile Include="x16r\cuda_x16_echo512.cu">
+      <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>
-    <CudaCompile Include="x16\cuda_x16_echo512_64.cu">
-      <Filter>Source Files\CUDA\x16</Filter>
+    <CudaCompile Include="x16r\cuda_x16_fugue512.cu">
+      <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>
-    <CudaCompile Include="x16\cuda_x16_fugue512.cu">
-      <Filter>Source Files\CUDA\x16</Filter>
+    <CudaCompile Include="x16r\cuda_x16_shabal512.cu">
+      <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>
-    <CudaCompile Include="x16\cuda_x16_shabal512.cu">
-      <Filter>Source Files\CUDA\x16</Filter>
+    <CudaCompile Include="x16r\cuda_x16_simd512_80.cu">
+      <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>
-    <CudaCompile Include="x16\cuda_x16_simd512_80.cu">
-      <Filter>Source Files\CUDA\x16</Filter>
+    <CudaCompile Include="x16r\x16r.cu">
+      <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>
-    <CudaCompile Include="x16\x16r.cu">
-      <Filter>Source Files\CUDA\x16</Filter>
+    <CudaCompile Include="qubit\qubit_luffa512_alexis.cu">
+      <Filter>Source Files\CUDA\qubit</Filter>
     </CudaCompile>
-    <CudaCompile Include="x16\x16s.cu">
-      <Filter>Source Files\CUDA\x16</Filter>
+    <CudaCompile Include="x11\cuda_x11_shavite512_alexis.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_echo_alexis.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x15\cuda_x14_shabal512_alexis.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\cuda_x13_fugue512_alexis.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\cuda_x13_hamsi512_alexis.cu" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico">
       <Filter>Ressources</Filter>
     </Image>
+    <Image Include="res\icon2.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\ccminer.rc">
