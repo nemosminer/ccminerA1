@@ -34,7 +34,7 @@ extern "C" {
 #include "cuda_helper.h"
 #include "cuda_x16r.h"
 
-#define GPU_HASH_CHECK_LOG 0
+#define GPU_HASH_CHECK_LOG 1
 static uint32_t *d_hash[MAX_GPUS];
 
 enum Algo {
@@ -365,13 +365,13 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 //		quark_skein512_cpu_init(thr_id, throughput);
 		quark_jh512_cpu_init(thr_id, throughput);
 		quark_keccak512_cpu_init(thr_id, throughput);
-		x11_shavite512_cpu_init(thr_id, throughput);
+//		x11_shavite512_cpu_init(thr_id, throughput);
 		if (x11_simd512_cpu_init(thr_id, throughput))
 		{
 			applog(LOG_WARNING, "SIMD was unable to initialize :( exiting...");
 			exit(-1);
 		}// 64
-//		x16_echo512_cuda_init(thr_id, throughput);
+		x16_echo512_cuda_init(thr_id, throughput);
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
 		x16_fugue512_cpu_init(thr_id, throughput);
@@ -398,35 +398,30 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		//testing 0xb, 0xc
 		//6FB7C831F4ED0A52
 //		((uint32_t*)ptarget)[7] = 0x5ac6acf2;
-		((uint32_t*)ptarget)[7] = 0x123f;
-		*((uint64_t*)&pdata[1]) = 0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
+		((uint32_t*)ptarget)[7] = 0x003f;
+//		*((uint64_t*)&pdata[1]) = 0xaaaaaaaaaaaaaaaa;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
+		((uint32_t*)pdata)[1] = 0x99999999; //E4F361B3
+		((uint32_t*)pdata)[2] = 0x99999999; //427B6D24
 //		((uint32_t*)pdata)[1] = 0xEFCDAB89;
 //		((uint32_t*)pdata)[2] = 0x67452301;
-//		((uint32_t*)pdata)[17] = 0x12345678;
-//		((uint32_t*)pdata)[1] = 0xd2d8ace2;
-//		((uint32_t*)pdata)[2] = 0x56878fc3;
-		//c38f8756e2acd8d2
-//		((uint32_t*)pdata)[1] = 0xB361F3E4; //E4F361B3
-//		((uint32_t*)pdata)[2] = 0x246D7B42; //427B6D24 // 0x4 80 round function
-//		((uint32_t*)pdata)[17] = 0xcfac6c5c;//0xcfac6c5a
 		/*
-		((uint32_t*)pdata)[1] = 0xB361F3E4; //E4F361B3
-		((uint32_t*)pdata)[2] = 0x246D7B42; //427B6D24
-		((uint32_t*)pdata)[17] = 0xcfac6c5a;
+		BLAKE = 0,
+		BMW,1
+		GROESTL,2
+		JH,3
+		KECCAK,4
+		SKEIN,5
+		LUFFA,6
+		CUBEHASH,7
+		SHAVITE,8
+		SIMD,9
+		ECHO,a
+		HAMSI,b
+		FUGUE,c
+		SHABAL,d
+		WHIRLPOOL,e
+		SHA512,f
 		*/
-//		((uint32_t*)pdata)[1] = 0xC0F3C1F9;
-//		((uint32_t*)pdata)[2] = 0xF86E8007;
-		//07806EF8F9C1F3C0
-//		((uint32_t*)ptarget)[7] = 0x12345678;//0x723f;
-//		((uint32_t*)pdata)[1] = 0xa8194c32;//0xa8194c3b;
-//		((uint32_t*)pdata)[2] = 0x7f5d6e2b;//0x7f5d6e|a|2;
-
-//		((uint8_t*)pdata)[8] = 0x80; // hashOrder[0] = '9'; for simd 80 + blake512 64
-//		((uint8_t*)pdata)[8] = 0x90; // hashOrder[0] = '9'; for simd 80 + blake512 64
-//		((uint8_t*)pdata)[8] = 0xA0; // hashOrder[0] = 'A'; for echo 80 + blake512 64
-//		((uint8_t*)pdata)[8] = 0xB0; // hashOrder[0] = 'B'; for hamsi 80 + blake512 64
-//		((uint8_t*)pdata)[8] = 0xC0; // hashOrder[0] = 'C'; for fugue 80 + blake512 64
-//		((uint8_t*)pdata)[8] = 0xE0; // hashOrder[0] = 'E'; for whirlpool 80 + blake512 64
 	}
 	uint32_t _ALIGN(64) endiandata[20];
 
