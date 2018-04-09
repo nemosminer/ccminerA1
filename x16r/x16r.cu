@@ -401,10 +401,10 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 //		((uint32_t*)ptarget)[7] = 0x5ac6acf2;
 		((uint32_t*)ptarget)[7] = 0x003f;
 //		*((uint64_t*)&pdata[1]) = 0xaaaaaaaaaaaaaaaa;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
-		((uint32_t*)pdata)[1] = 0x99999999; //E4F361B3
-		((uint32_t*)pdata)[2] = 0x99999999; //427B6D24
-//		((uint32_t*)pdata)[1] = 0xEFCDAB89;
-//		((uint32_t*)pdata)[2] = 0x67452301;
+//		((uint32_t*)pdata)[1] = 0x99999999; //E4F361B3
+//		((uint32_t*)pdata)[2] = 0x99999999; //427B6D24
+		((uint32_t*)pdata)[1] = 0xEFCDAB89;
+		((uint32_t*)pdata)[2] = 0x67452301;
 		/*
 		BLAKE = 0,
 		BMW,1
