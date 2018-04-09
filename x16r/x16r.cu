@@ -513,6 +513,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	}
 
 	int warn = 0;
+	int rowdy = 16;
 	do {
 		// Hash with CUDA
 /*
@@ -583,9 +584,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				break;
 		}
 */		
-		if (throughput > (1 << 16))
-			throughput -= 0x2000;
-		if (work_restart[thr_id].restart) return -127;
+			if (work_restart[thr_id].restart) return -127;
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
@@ -676,6 +675,32 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 					return -128;
 				}
 			}
+		}
+
+		if (rowdy > 8 && throughput > (1 << 16))
+		{
+			if (rowdy == 14)
+			{
+				throughput = min(throughput - 0x4000, max_nonce - pdata[19]);
+				rowdy--;
+			}
+			else if (rowdy == 12)
+			{
+				throughput = min(throughput + 0x40000, max_nonce - pdata[19]);
+				rowdy--;
+			}
+			else
+				throughput = min(throughput - (0x800 << (rowdy-- & 1)), max_nonce - pdata[19]);
+			//			throughput = min(throughput, max_nonce - pdata[19]);
+			if (throughput == max_nonce - pdata[19])
+				gpulog(LOG_BLUE, thr_id, "CHECKED OUT...");
+		}
+		else
+		{
+			throughput = min(cuda_default_throughput(thr_id, 1U << 19), max_nonce - pdata[19]);
+			if (throughput == max_nonce - pdata[19])
+				gpulog(LOG_BLUE, thr_id, "CHECKED OUT...");
+			rowdy = 14;
 		}
 
 		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
