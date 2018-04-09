@@ -34,7 +34,7 @@ extern "C" {
 #include "cuda_helper.h"
 #include "cuda_x16r.h"
 
-#define GPU_HASH_CHECK_LOG 1
+#define GPU_HASH_CHECK_LOG 0
 static uint32_t *d_hash[MAX_GPUS];
 
 enum Algo {
@@ -338,7 +338,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	const int dev_id = device_map[thr_id];
 //	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 20 : 19;
 //	if (strstr(device_name[dev_id], "GTX 1080")) intensity = 20;
-	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21);
+	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 19);
 
 //	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 	if (init[thr_id]){
@@ -380,7 +380,8 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		x16_whirlpool512_init(thr_id, throughput);
 		x17_sha512_cpu_init(thr_id, throughput);
 
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput + 0x10000000), 0);
+//		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -443,6 +444,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	cuda_check_cpu_setTarget(ptarget);
 
 	uint8_t algo80 = (*(uint64_t*)&endiandata[1] >> 60) & 0x0f;
+
 	switch (algo80) {
 		case BLAKE:
 			//! low impact, can do a lot to optimize quark_blake512
@@ -581,6 +583,8 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				break;
 		}
 */		
+		if (throughput > (1 << 16))
+			throughput -= 0x2000;
 		if (work_restart[thr_id].restart) return -127;
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
