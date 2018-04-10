@@ -108,7 +108,7 @@ bool use_colors = true;
 int use_pok = 0;
 static bool opt_background = false;
 bool opt_quiet = false;
-int opt_maxlograte = 5;//3;
+int opt_maxlograte = 3;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_time_limit = -1;
@@ -301,6 +301,7 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x16r        X16R (Raven)\n\
+			x16s        X16S\n\
 			x17         X17\n\
 			wildkeccak  Boolberry\n\
 			zr5         ZR5 (ZiftrCoin)\n\
@@ -683,24 +684,25 @@ static void calc_network_diff(struct work *work)
 	int16_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 
 	uint64_t diffone = 0x0000FFFF00000000ull;
-	/*
+
 	double d = (double)0x0000ffff / (double)bits;
 
 	for (int m=shift; m < 29; m++) d *= 256.0;
 	for (int m=29; m < shift; m++) d /= 256.0;
-	*/
 
+	/*
 	uint32_t d = 0x0000ffff / bits;
 
 	for (int m = shift; m < 29; m++) d <<= 8;
 	for (int m = 29; m < shift; m++) d >>= 8;
-
+	*/
 	//	if (opt_algo == ALGO_DECRED && shift == 28) d *= 256.0;
 	if (opt_debug_diff)
-		applog(LOG_DEBUG, "net diff: %u -> shift %u, bits %08x", d, shift, bits);
-//		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
+//		applog(LOG_DEBUG, "net diff: %u -> shift %u, bits %08x", d, shift, bits);
+		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
 
-	net_diff = (double)d;
+	net_diff = d;
+//	net_diff = (double)d;
 }
 
 /* decode data from getwork (wallets and longpoll pools) */
@@ -1755,6 +1757,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 //		case ALGO_TIMETRAVEL:
 //		case ALGO_BITCORE:
 		case ALGO_X16R:
+		case ALGO_X16S:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));//(256.0 * opt_difficulty));
 			break;
 #if 0
@@ -2503,6 +2506,9 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_x15(thr_id, &work, max_nonce, &hashes_done);
 			break;
 #endif
+		case ALGO_X16S:
+			rc = scanhash_x16s(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_X16R:
 //			try{
 				rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done);
