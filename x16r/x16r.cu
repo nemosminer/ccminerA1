@@ -645,7 +645,9 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		{
 			applog(LOG_BLUE, "yes");
 			return -127;
-		}
+		} else
+			cudaDeviceSynchronize();
+
 #ifdef _DEBUG
 		uint32_t _ALIGN(64) dhash[8];
 		be32enc(&endiandata[19], pdata[19]);
