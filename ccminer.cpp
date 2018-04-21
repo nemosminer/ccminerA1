@@ -147,6 +147,7 @@ int32_t device_led[MAX_GPUS] = { -1, -1 };
 int opt_led_mode = 0;
 int opt_cudaschedule = -1;
 static bool opt_keep_clocks = false;
+int strange = 0;
 
 // un-linked to cmdline scrypt options (useless)
 int device_batchsize[MAX_GPUS] = { 0 };
@@ -1037,6 +1038,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			free(noncestr);
 			// prevent useless computing on some pools
 			g_work_time = 0;
+			applog(LOG_NOTICE, "PUC");
 			restart_threads();
 			return true;
 		}
@@ -1789,11 +1791,22 @@ void restart_threads(void)
 	if (opt_debug && !opt_quiet)
 		applog(LOG_DEBUG, "%s", __FUNCTION__);
 	// restart mining thread IRL
-	for (int i = 0; i < opt_n_threads && work_restart; i++)
+	if (stratum.job.clean && strange)
 	{
-		work_restart[i].restart = 1;
+		applog(LOG_ERR, "CLEAN");
+		for (int i = 0; i < opt_n_threads && work_restart; i++)
+		{
+			work_restart[i].restart = 2;
+		}
 	}
-	x11_echo512_cpu_init(0, 1 << 21);
+	else for (int i = 0; i < opt_n_threads && work_restart; i++)
+	{
+		if (!work_restart[i].restart)
+		{
+			work_restart[i].restart = 1;
+			x11_echo512_cpu_init(0, 1 << 21);
+		}
+	}
 }
 
 static bool wanna_mine(int thr_id)
@@ -2796,8 +2809,9 @@ longpoll_retry:
 			submit_old = soval ? json_is_true(soval) : false;
 			pthread_mutex_lock(&g_work_lock);
 			if (work_decode(json_object_get(val, "result"), &g_work)) {
+				applog(LOG_NOTICE, "VAL");
 				restart_threads();
-				if (!opt_quiet) {
+					if (!opt_quiet) {
 					char netinfo[64] = { 0 };
 					if (net_diff > 0.) {
 						sprintf(netinfo, ", diff %.3f", net_diff);
@@ -2892,6 +2906,7 @@ static bool stratum_handle_response(char *buf)
 		share_result(json_is_null(err_val), stratum.pooln, sharediff, reject_reason);
 		if (reject_reason) {
 			g_work_time = 0;
+			applog(LOG_NOTICE, "RPC2");
 			restart_threads();
 		}
 	} else {
@@ -2948,6 +2963,7 @@ wait_stratum_url:
 			g_work_time = 0;
 			g_work.data[0] = 0;
 			pthread_mutex_unlock(&g_work_lock);
+			applog(LOG_NOTICE, "RUG");
 			restart_threads();
 
 			if (!stratum_connect(&stratum, pool->url) ||
@@ -2992,12 +3008,19 @@ wait_stratum_url:
 					last_block_height = stratum.job.height;
 					if (net_diff > 0.)
 						applog(LOG_BLUE, "%s block %d, diff %.3f", algo_names[opt_algo],
-							stratum.job.height, net_diff);
+						stratum.job.height, net_diff);
 					else
 						applog(LOG_BLUE, "%s %s block %d", pool->short_url, algo_names[opt_algo],
-							stratum.job.height);
+						stratum.job.height);
 				}
+				else
+				{
+					strange = 1;
+					applog(LOG_WARNING, "STRANGE");
+				}
+				applog(LOG_NOTICE, "JOB");
 				restart_threads();
+				strange = 0;
 				if (check_dups || opt_showdiff)
 					hashlog_purge_old();
 				stats_purge_old();

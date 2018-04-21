@@ -349,7 +349,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		throughput = min(throughput, max_nonce - first_nonce);
 		if (throughput == max_nonce - first_nonce)
 			applog(LOG_BLUE, "Something did happen, be happy?!");
-		if (work_restart[thr_id].restart) return -127;
+		if (work_restart[thr_id].restart == 1) return -127;
 	}
 
 	if (!init[thr_id])
@@ -615,7 +615,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		}
 		*/
 		
-		if (work_restart[thr_id].restart) return -127;
+		if (work_restart[thr_id].restart == 1) return -127;
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f]((int*)(((uintptr_t)d_ark) | (thr_id & 15)), throughput, d_hash[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f]((int*)(((uintptr_t)d_ark) | (thr_id & 15)), throughput, d_hash[thr_id]);
@@ -641,11 +641,11 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 
 		work->nonces[0] = cuda_check_hash((int*)(((uintptr_t)d_ark) | (thr_id & 15)), throughput, pdata[19], d_hash[thr_id]);
 		x13_echo512_cpu_init(thr_id, throughput);
-		if (work_restart[thr_id].restart)
+		if (work_restart[thr_id].restart == 1)
 		{
 			applog(LOG_BLUE, "yes");
 			return -127;
-		} else
+		} else if (!work_restart[thr_id].restart)
 			cudaDeviceSynchronize();
 
 #ifdef _DEBUG
@@ -755,7 +755,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce;
-	if (work_restart[thr_id].restart) return -127;
+	if (work_restart[thr_id].restart == 1) return -127;
 	return 0;
 }
 
@@ -792,20 +792,20 @@ void x11_echo512_cuda_init(int thr_id, uint32_t threads)
 {
 	if (q++) return;
 	cudaMalloc(&d_ark, (size_t)64);
-//	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
+	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
 }
 __host__ extern void x11_echo512_cpu_init(int thr_id, uint32_t threads)
 {
 	h_ark = -1;
-//	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
+	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
 	applog(LOG_DEBUG, "fun?");
 }
 __host__ extern void x13_echo512_cpu_init(int thr_id, uint32_t threads)
 {
 //	h_ark ^= (1 << thr_id);
 	h_ark &= ~(1 << thr_id);
-//	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
+	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
 }
