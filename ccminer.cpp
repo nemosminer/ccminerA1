@@ -2650,8 +2650,8 @@ static void *miner_thread(void *userdata)
 
 			work.submit_nonce_id = 0;
 			nonceptr[0] = work.nonces[0];
-//			if (work_restart[thr_id].restart)
-//				continue;
+			if (work_restart[thr_id].restart)
+				continue;
 			if (!submit_work(mythr, &work))
 				break;
 			nonceptr[0] = curnonce;
@@ -2676,8 +2676,8 @@ static void *miner_thread(void *userdata)
 					work.data[22] = 0;
 				}
 #endif
-//				if (work_restart[thr_id].restart)
-//					continue;
+				if (work_restart[thr_id].restart)
+					continue;
 				if (!submit_work(mythr, &work))
 					break;
 				nonceptr[0] = curnonce;

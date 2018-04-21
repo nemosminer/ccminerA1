@@ -71,7 +71,7 @@ void quark_groestl512_gpu_hash_64_quad_a1_min3r(int *thr_id, const uint32_t thre
 		message[0].y = ((uint32_t*)&pHash[1])[thr];
 		message[0].z = ((uint32_t*)&pHash[2])[thr];
 		message[0].w = ((uint32_t*)&pHash[3])[thr];
-		__syncthreads();
+//		__syncthreads();
 
 //#pragma unroll
 //		for (int k = 0; k<4; k++) message[k] = pHash[thr + (k * THF)];

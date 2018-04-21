@@ -632,7 +632,6 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (13 * 4)) & 0x0f]((int*)(((uintptr_t)d_ark) | (thr_id & 15)), throughput, d_hash[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (14 * 4)) & 0x0f]((int*)(((uintptr_t)d_ark) | (thr_id & 15)), throughput, d_hash[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (15 * 4)) & 0x0f]((int*)(((uintptr_t)d_ark) | (thr_id & 15)), throughput, d_hash[thr_id]);
-		x13_echo512_cpu_init(thr_id, throughput);
 
 		//		if (work_restart[thr_id].restart) return -127;
 
@@ -640,8 +639,13 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-//		if (work_restart[thr_id].restart) return -127;
+		work->nonces[0] = cuda_check_hash((int*)(((uintptr_t)d_ark) | (thr_id & 15)), throughput, pdata[19], d_hash[thr_id]);
+		x13_echo512_cpu_init(thr_id, throughput);
+		if (work_restart[thr_id].restart)
+		{
+			applog(LOG_BLUE, "yes");
+			return -127;
+		}
 #ifdef _DEBUG
 		uint32_t _ALIGN(64) dhash[8];
 		be32enc(&endiandata[19], pdata[19]);
@@ -707,8 +711,8 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 					//					work->nonces[0], algo_strings[algo80], hashOrder);
 					warn = 0;
 					//					work->data[19] = max_nonce;
-					if (work_restart[thr_id].restart) return -127;
-					return -128;
+//					if (work_restart[thr_id].restart) return -127;
+//					return -128;
 				}
 			}
 		}
@@ -749,7 +753,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce;
-//	if (work_restart[thr_id].restart) return -127;
+	if (work_restart[thr_id].restart) return -127;
 	return 0;
 }
 
@@ -777,7 +781,7 @@ extern "C" void free_x16r(int thr_id)
 }
 
 volatile int h_ark = 0;
-
+cudaStream_t stream1;
 extern "C" int *_d_ark = NULL;
 static int q = 0;
 
@@ -786,17 +790,20 @@ void x11_echo512_cuda_init(int thr_id, uint32_t threads)
 {
 	if (q++) return;
 	cudaMalloc(&d_ark, (size_t)64);
-	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
 }
 __host__ extern void x11_echo512_cpu_init(int thr_id, uint32_t threads)
 {
 	h_ark = -1;
-	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
-	applog(LOG_DEBUG, "fun");
+//	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
+	applog(LOG_DEBUG, "fun?");
 }
 __host__ extern void x13_echo512_cpu_init(int thr_id, uint32_t threads)
 {
 //	h_ark ^= (1 << thr_id);
 	h_ark &= ~(1 << thr_id);
-	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
 }

@@ -648,7 +648,7 @@ void x15_whirlpool_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 		*(uint2x4*)&hash[ 0] = __ldg4((uint2x4*)&g_hash[(thread<<3) + 0]);
 		*(uint2x4*)&hash[ 4] = __ldg4((uint2x4*)&g_hash[(thread<<3) + 4]);
 
-		__syncthreads();
+//		__syncthreads();
 
 		#pragma unroll 8
 		for(int i=0;i<8;i++)
