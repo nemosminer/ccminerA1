@@ -8,7 +8,8 @@
 #include "cuda_vectors_alexis.h"
 
 #define INTENSIVE_GMF
-#include "cuda_x11_aes_alexis.cuh"
+//#include "cuda_x11_aes_alexis.cuh"
+#include "../x11/cuda_x11_echo_aes.cuh"
 
 __device__
 static void echo_round_alexis(const uint32_t sharedMemory[4][256], uint32_t *W, uint32_t &k0){
@@ -266,6 +267,12 @@ static void x11_echo512_gpu_hash_64_final_alexis(uint32_t threads, uint64_t *g_h
 				resNonce[1] = tmp;
 		}
 	}
+}
+
+__host__
+void X11_shavite512_cpu_init(int thr_id, uint32_t threads)
+{
+	aes_cpu_init(thr_id);
 }
 
 __host__
