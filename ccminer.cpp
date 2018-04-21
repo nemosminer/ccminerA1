@@ -1791,15 +1791,18 @@ void restart_threads(void)
 	if (opt_debug && !opt_quiet)
 		applog(LOG_DEBUG, "%s", __FUNCTION__);
 	// restart mining thread IRL
+	/*
 	if (stratum.job.clean && strange)
 	{
 		applog(LOG_ERR, "CLEAN");
 		for (int i = 0; i < opt_n_threads && work_restart; i++)
 		{
 			work_restart[i].restart = 2;
+			x11_echo512_cpu_init(0, 1 << 21);
 		}
 	}
-	else for (int i = 0; i < opt_n_threads && work_restart; i++)
+	else */
+	for (int i = 0; i < opt_n_threads && work_restart; i++)
 	{
 		if (!work_restart[i].restart)
 		{

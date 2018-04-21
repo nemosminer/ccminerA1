@@ -186,7 +186,7 @@ static void getAlgoString(const uint32_t* prevblock, char *output)
 }
 
 // X16R CPU Hash (Validation)
-extern "C" void x16r_hash(void *output, const void *input)
+extern "C" void x16r_hash(int thr_id, void *output, const void *input)
 {
 	//unsigned char _ALIGN(64) hash[128];
 
@@ -303,6 +303,11 @@ extern "C" void x16r_hash(void *output, const void *input)
 		}
 		in = (void*)output;
 		size = 64;
+		if (work_restart[thr_id].restart == 1)
+		{
+			applog(LOG_BLUE, "yes");
+			return;
+		}
 	}
 	//	memcpy(output, hash, 32);
 }
@@ -645,13 +650,13 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		{
 			applog(LOG_BLUE, "yes");
 			return -127;
-		} else if (!work_restart[thr_id].restart)
+		} else //if (!work_restart[thr_id].restart)
 			cudaDeviceSynchronize();
 
 #ifdef _DEBUG
 		uint32_t _ALIGN(64) dhash[8];
 		be32enc(&endiandata[19], pdata[19]);
-		x16r_hash(dhash, endiandata);
+		x16r_hash(thr_id, dhash, endiandata);
 		applog_hash(dhash);
 		return -1;
 #endif
@@ -660,15 +665,15 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 			const uint32_t Htarg = ptarget[7];
 			uint32_t _ALIGN(64) vhash[8];
 			be32enc(&endiandata[19], work->nonces[0]);
-			x16r_hash(vhash, endiandata);
+			x16r_hash(thr_id, vhash, endiandata);
 
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 				work->valid_nonces = 1;
-				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				work->nonces[1] = cuda_check_hash_suppl((int*)(((uintptr_t)d_ark) | (thr_id & 15)), throughput, pdata[19], d_hash[thr_id], 1);
 				work_set_target_ratio(work, vhash);
 				if (work->nonces[1] != 0) {
 					be32enc(&endiandata[19], work->nonces[1]);
-					x16r_hash(vhash, endiandata);
+					x16r_hash(thr_id, vhash, endiandata);
 					bn_set_target_ratio(work, vhash, 1);
 					work->valid_nonces++;
 					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
@@ -805,7 +810,11 @@ __host__ extern void x11_echo512_cpu_init(int thr_id, uint32_t threads)
 __host__ extern void x13_echo512_cpu_init(int thr_id, uint32_t threads)
 {
 //	h_ark ^= (1 << thr_id);
-	h_ark &= ~(1 << thr_id);
-	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
-//	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
+	if (h_ark & (1 << thr_id))
+	{
+		h_ark &= ~(1 << thr_id);
+		cudaDeviceSynchronize();
+		cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+		//	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
+	}
 }
