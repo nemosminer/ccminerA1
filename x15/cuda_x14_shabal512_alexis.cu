@@ -105,7 +105,7 @@ void ROTATE(uint32_t* A){
 __global__ __launch_bounds__(384,3)
 void x14_shabal512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_hash)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 

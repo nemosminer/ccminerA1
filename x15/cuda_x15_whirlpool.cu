@@ -621,7 +621,7 @@ __global__
 __launch_bounds__(TPB64,2)
 void x15_whirlpool_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	__shared__ uint2 sharedMemory[7][256];
 

@@ -163,7 +163,7 @@ static bool hashbelowtarget(const uint32_t *const __restrict__ hash, const uint3
 __global__ __launch_bounds__(512, 4)
 void cuda_checkhash_64(int *thr_id, uint32_t threads, uint32_t startNounce, uint32_t *hash, uint32_t *resNonces)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -250,7 +250,7 @@ uint32_t cuda_check_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, 
 __global__ __launch_bounds__(512, 4)
 void cuda_checkhash_64_suppl(int* thr_id, uint32_t startNounce, uint32_t *hash, uint32_t *resNonces)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 

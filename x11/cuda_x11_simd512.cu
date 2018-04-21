@@ -587,7 +587,7 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 __global__ __launch_bounds__(TPB, 4)
 void x11_simd512_gpu_expand_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_temp4)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	int threadBloc = (blockDim.x * blockIdx.x + threadIdx.x) / 8;
 	if (threadBloc < threads)
@@ -611,7 +611,7 @@ void x11_simd512_gpu_expand_64(int *thr_id, uint32_t threads, uint32_t *g_hash, 
 __global__ __launch_bounds__(TPB, 1)
 void x11_simd512_gpu_compress1_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -625,7 +625,7 @@ void x11_simd512_gpu_compress1_64(int *thr_id, uint32_t threads, uint32_t *g_has
 __global__ __launch_bounds__(TPB, 1)
 void x11_simd512_gpu_compress2_64(int *thr_id, uint32_t threads, uint4 *g_fft4, uint32_t *g_state)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -638,7 +638,7 @@ void x11_simd512_gpu_compress2_64(int *thr_id, uint32_t threads, uint4 *g_fft4, 
 __global__ __launch_bounds__(TPB, 2)
 void x11_simd512_gpu_compress_64_maxwell(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -653,7 +653,7 @@ void x11_simd512_gpu_compress_64_maxwell(int *thr_id, uint32_t threads, uint32_t
 __global__ __launch_bounds__(TPB, 2)
 void x11_simd512_gpu_final_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);

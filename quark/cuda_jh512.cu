@@ -279,7 +279,7 @@ __global__
 //__launch_bounds__(256,2)
 void quark_jh512_gpu_hash_64(int *thr_id, const uint32_t threads, uint32_t* g_hash)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)

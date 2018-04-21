@@ -159,7 +159,7 @@ void Compression512_30(uint64_t *msg, uint64_t *hash)
 __global__
 void quark_bmw512_gpu_hash_64_30(int *thr_id, uint32_t threads, uint64_t *g_hash)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)

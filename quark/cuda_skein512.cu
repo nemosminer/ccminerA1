@@ -468,7 +468,7 @@ __launch_bounds__(TPB50, 5)
 #endif
 void quark_skein512_gpu_hash_64(int *thr_id, const uint32_t threads, uint64_t* __restrict__ g_hash)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 

@@ -324,7 +324,7 @@ __launch_bounds__(64, 8)
 #endif
 void quark_bmw512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
 		return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)

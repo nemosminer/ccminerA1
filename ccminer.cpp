@@ -2526,7 +2526,9 @@ static void *miner_thread(void *userdata)
 #endif
 		case ALGO_X16R:
 //			try{
+
 				rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done);
+
 				if (rc == -127)
 				{
 //					work.data[19] = max_nonce;
