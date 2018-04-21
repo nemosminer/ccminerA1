@@ -1,5 +1,6 @@
 /***************************************************************************************************
 * SIMD512 SM3+ CUDA IMPLEMENTATION (require cuda_x11_simd512_func.cuh)
+* Uses Alexis78 simd modifications
 */
 
 #include "miner.h"
