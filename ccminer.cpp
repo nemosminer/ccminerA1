@@ -1807,7 +1807,7 @@ void restart_threads(void)
 		if (!work_restart[i].restart)
 		{
 			work_restart[i].restart = 1;
-			x11_echo512_cpu_init(0, 1 << 21);
+			x11_echo512_cpu_init(i, 1 << 21);
 		}
 	}
 }
