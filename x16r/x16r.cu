@@ -650,8 +650,8 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		{
 			applog(LOG_BLUE, "yes");
 			return -127;
-		} else //if (!work_restart[thr_id].restart)
-			cudaDeviceSynchronize();
+		} //else if (!work_restart[thr_id].restart)
+			//cudaDeviceSynchronize();
 
 #ifdef _DEBUG
 		uint32_t _ALIGN(64) dhash[8];
@@ -813,7 +813,8 @@ __host__ extern void x13_echo512_cpu_init(int thr_id, uint32_t threads)
 	if (h_ark & (1 << thr_id))
 	{
 		h_ark &= ~(1 << thr_id);
-		cudaDeviceSynchronize();
+//		if (work_restart[thr_id].restart == 1)
+//			cudaDeviceSynchronize();
 		cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
 		//	cudaMemcpyAsync(d_ark, (int*)&h_ark, sizeof(int), cudaMemcpyHostToDevice, stream1);
 	}
