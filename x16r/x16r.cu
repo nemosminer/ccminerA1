@@ -82,7 +82,7 @@ static __thread bool s_implemented = false;
 static __thread char hashOrder[HASH_FUNC_COUNT + 1] = { 0 };
 
 static void(*pAlgo64[16])(int*, uint32_t, uint32_t*) =
-{
+{ //bug kills competition (with memory error).
 	quark_blake512_cpu_hash_64,
 	quark_bmw512_cpu_hash_64,
 	quark_groestl512_cpu_hash_64,
