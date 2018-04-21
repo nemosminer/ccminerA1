@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include "cuda_helper.h"
+#include "cuda_helper_alexis.h"
 #include "miner.h"
 
 // ZR5
@@ -478,8 +478,11 @@ void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen)
 }
 
 __global__
-void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
+void jackpot_keccak512_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
+//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
+//		return;
+
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -529,7 +532,7 @@ void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNoun
 
 	size_t shared_size = 0;
 
-	jackpot_keccak512_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash);
+	jackpot_keccak512_gpu_hash << <grid, block, shared_size >> >(thr_id, threads, startNounce, (uint64_t*)d_hash);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 

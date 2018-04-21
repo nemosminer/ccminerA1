@@ -534,9 +534,12 @@ __global__ __launch_bounds__(TPB, 2)
 #else
 #error "Not set up for this"
 #endif
-void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
+void x11_shavite512_gpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
-	#if TPB == 128
+//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
+//		return;
+
+#if TPB == 128
 	aes_gpu_init_128(sharedMemory);
 	#elif TPB == 384
 	//! todo, fix naming and sharedMemory
@@ -604,7 +607,7 @@ void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x11_shavite512_gpu_hash_80<<<grid, block>>>(threads, startNounce, (uint64_t*)d_outputHash);
+	x11_shavite512_gpu_hash_80 << <grid, block >> >(thr_id, threads, startNounce, (uint64_t*)d_outputHash);
 }
 
 __host__

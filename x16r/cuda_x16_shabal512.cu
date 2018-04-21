@@ -241,8 +241,11 @@ void x16_shabal512_setBlock_80(void *pdata)
 #define TPB_SHABAL 256
 
 __global__ __launch_bounds__(TPB_SHABAL, 2)
-void x16_shabal512_gpu_hash_80(uint32_t threads, const uint32_t startNonce, uint32_t *g_hash)
+void x16_shabal512_gpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNonce, uint32_t *g_hash)
 {
+//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
+//		return;
+
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	uint32_t B[] = {
@@ -348,5 +351,5 @@ void x16_shabal512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	x16_shabal512_gpu_hash_80 <<<grid, block >>>(threads, startNonce, d_hash);
+	x16_shabal512_gpu_hash_80 << <grid, block >> >(thr_id, threads, startNonce, d_hash);
 }

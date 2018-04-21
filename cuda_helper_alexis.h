@@ -536,7 +536,6 @@ static __device__ __forceinline__ uint2 operator* (const uint2 a,const uint2 b){
 		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
 	return result;
 }
-
 // uint2 ROR/ROL methods
 __device__ __forceinline__
 uint2 ROR2(const uint2 a, const uint32_t offset){

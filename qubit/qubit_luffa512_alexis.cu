@@ -3,7 +3,7 @@
  */
 
 #include <miner.h>
-#include "cuda_helper.h"
+#include "cuda_helper_alexis.h"
 #include "cuda_vectors_alexis.h"
 
 static unsigned char PaddedMessage[128];
@@ -621,8 +621,11 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 
 
 __global__ __launch_bounds__(256, 4)
-void qubit_luffa512_gpu_hash_80_alexis(const uint32_t threads,const uint32_t startNounce, uint32_t *outputHash)
+void qubit_luffa512_gpu_hash_80_alexis(int thr_id, const uint32_t threads,const uint32_t startNounce, uint32_t *outputHash)
 {
+//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
+//		return;
+
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -675,7 +678,7 @@ void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t st
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	qubit_luffa512_gpu_hash_80_alexis<<<grid, block>>> (threads, startNounce, d_outputHash);
+	qubit_luffa512_gpu_hash_80_alexis << <grid, block >> > (thr_id, threads, startNounce, d_outputHash);
 }
 
 //#if __CUDA_ARCH__ == 500
@@ -684,11 +687,14 @@ void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t st
 
 __global__
 __launch_bounds__(384,2)
-void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash){
+void x11_luffa512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_hash)
+{
 
+	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t statebuffer[8];
-	
+
 	if (thread < threads)
 	{
 		uint32_t statechainv[40] = {
@@ -827,9 +833,9 @@ void qubit_luffa512_cpu_setBlock_80_alexis(void *pdata)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 10*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 	qubit_cpu_precalc();
 }
-
+ 
 __host__
-void x11_luffa512_cpu_hash_64_alexis(int thr_id, uint32_t threads,uint32_t *d_hash)
+void x11_luffa512_cpu_hash_64_alexis(int *thr_id, uint32_t threads,uint32_t *d_hash)
 {
     const uint32_t threadsperblock = 384;
 
@@ -837,5 +843,5 @@ void x11_luffa512_cpu_hash_64_alexis(int thr_id, uint32_t threads,uint32_t *d_ha
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    x11_luffa512_gpu_hash_64_alexis<<<grid, block>>>(threads,d_hash);
+	x11_luffa512_gpu_hash_64_alexis << <grid, block >> >(thr_id, threads, d_hash);
 }

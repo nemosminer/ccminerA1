@@ -186,8 +186,10 @@ static void round_4_8_12(const uint32_t sharedMemory[4][256], uint32_t* r, uint4
 
 // GPU Hash
 __global__ __launch_bounds__(TPB,2) /* 64 registers with 128,8 - 72 regs with 128,7 */
-void x11_shavite512_gpu_hash_64_alexis(const uint32_t threads, uint64_t *g_hash)
+void x11_shavite512_gpu_hash_64_alexis(int *thr_id, const uint32_t threads, uint64_t *g_hash)
 {
+	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+		return;
 	__shared__ uint32_t sharedMemory[4][256];
 
 	aes_gpu_init_mt_256(sharedMemory);
@@ -505,13 +507,13 @@ void x11_shavite512_gpu_hash_64_alexis(const uint32_t threads, uint64_t *g_hash)
 		*(uint2x4*)&Hash[ 4] = *(uint2x4*)&state[ 8] ^ *(uint2x4*)&p[ 0];
 	}
 }
-
+ 
 __host__
-void x11_shavite512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash)
+void x11_shavite512_cpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *d_hash)
 {
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
 
 	// note: 128 threads minimum are required to init the shared memory array
-	x11_shavite512_gpu_hash_64_alexis<<<grid, block>>>(threads, (uint64_t*)d_hash);
+	x11_shavite512_gpu_hash_64_alexis << <grid, block >> >(thr_id, threads, (uint64_t*)d_hash);
 }

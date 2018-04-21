@@ -244,6 +244,8 @@ static int algo80_fails[HASH_FUNC_COUNT] = { 0 };
 */
 extern "C" int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	return -1;
+#if 0
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
@@ -635,6 +637,7 @@ extern "C" int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, 
 
 	*hashes_done = pdata[19] - first_nonce;
 	return 0;
+#endif
 }
 
 // cleanup

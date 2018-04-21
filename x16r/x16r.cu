@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <unistd.h>
-
+#define _ARKS_ 0
 extern "C" {
 #include "sph/sph_blake.h"
 #include "sph/sph_bmw.h"
@@ -31,11 +31,11 @@ extern "C" {
 }
 
 #include "miner.h"
-#include "cuda_helper.h"
+#include "cuda_helper_alexis.h"
 #include "cuda_x16r.h"
 
 #define GPU_HASH_CHECK_LOG 0
-static uint32_t *d_hash[MAX_GPUS];
+static uint32_t *d_hash[MAX_GPUS+1];
 
 enum Algo {
 	BLAKE = 0,
@@ -81,7 +81,7 @@ static __thread uint32_t s_ntime = UINT32_MAX;
 static __thread bool s_implemented = false;
 static __thread char hashOrder[HASH_FUNC_COUNT + 1] = { 0 };
 
-static void(*pAlgo64[16])(int, uint32_t, uint32_t*) =
+static void(*pAlgo64[16])(int*, uint32_t, uint32_t*) =
 {
 	quark_blake512_cpu_hash_64,
 	quark_bmw512_cpu_hash_64,
@@ -329,6 +329,10 @@ static int algo64_tests[HASH_FUNC_COUNT] = { 0 };
 #endif
 static int algo80_fails[HASH_FUNC_COUNT] = { 0 };
 #define NO_ORDER_COUNTER 1
+__host__ extern void x11_echo512_cuda_init(int thr_id, uint32_t threads);
+__host__ extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
+__host__ extern void x13_echo512_cpu_init(int thr_id, uint32_t threads);
+__device__ int *d_ark;
 
 extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -365,13 +369,13 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 //		quark_skein512_cpu_init(thr_id, throughput);
 		quark_jh512_cpu_init(thr_id, throughput);
 		quark_keccak512_cpu_init(thr_id, throughput);
-//		x11_shavite512_cpu_init(thr_id, throughput);
+		x11_shavite512_cpu_init(thr_id, throughput);
 		if (x11_simd512_cpu_init(thr_id, throughput))
 		{
 			applog(LOG_WARNING, "SIMD was unable to initialize :( exiting...");
 			exit(-1);
 		}// 64
-		x16_echo512_cuda_init(thr_id, throughput);
+		x11_echo512_cuda_init(thr_id, throughput);
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
 		x16_fugue512_cpu_init(thr_id, throughput);
@@ -381,8 +385,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		x17_sha512_cpu_init(thr_id, throughput);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput + 0x10000000), 0);
-//		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput), 0);
-
+		
 		cuda_check_cpu_init(thr_id, throughput);
 
 		init[thr_id] = true;
@@ -400,11 +403,11 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		//6FB7C831F4ED0A52
 //		((uint32_t*)ptarget)[7] = 0x5ac6acf2;
 		((uint32_t*)ptarget)[7] = 0x003f;
-//		*((uint64_t*)&pdata[1]) = 0xaaaaaaaaaaaaaaaa;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
-//		((uint32_t*)pdata)[1] = 0x99999999; //E4F361B3
-//		((uint32_t*)pdata)[2] = 0x99999999; //427B6D24
 		((uint32_t*)pdata)[1] = 0xEFCDAB89;
 		((uint32_t*)pdata)[2] = 0x67452301;
+		*((uint64_t*)&pdata[1]) = 0xaaaaaaaaaaaaaaaa;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
+//		((uint32_t*)pdata)[1] = 0x99999999; //E4F361B3
+//		((uint32_t*)pdata)[2] = 0x99999999; //427B6D24
 		/*
 		BLAKE = 0,
 		BMW,1
@@ -513,7 +516,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	}
 
 	int warn = 0;
-	int rowdy = 16;
+//	int rowdy = 16;
 	do {
 		// Hash with CUDA
 /*
@@ -586,28 +589,31 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 */		
 			if (work_restart[thr_id].restart) return -127;
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (3 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (4 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (5 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (6 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (7 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (8 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (9 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (10 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (11 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (12 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (13 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (14 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (15 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id]);
-		if (work_restart[thr_id].restart) return -127;
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (3 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (4 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (5 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (6 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (7 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (8 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (9 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (10 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (11 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (12 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (13 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (14 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (15 * 4)) & 0x0f]((int*)((uint64_t)d_ark | (thr_id & 15)), throughput, d_hash[thr_id]);
+		x13_echo512_cpu_init(thr_id, throughput);
+
+//		if (work_restart[thr_id].restart) return -127;
 
 //		run_x16r_rounds(&endiandata[1], thr_id, throughput, pdata[19], d_hash[thr_id]);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
-
+		 
 		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (work_restart[thr_id].restart) return -127;
 #ifdef _DEBUG
 		uint32_t _ALIGN(64) dhash[8];
 		be32enc(&endiandata[19], pdata[19]);
@@ -676,7 +682,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				}
 			}
 		}
-
+#if 0
 		if (rowdy > 8 && throughput > (1 << 16))
 		{
 			if (rowdy == 14)
@@ -702,7 +708,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				gpulog(LOG_BLUE, thr_id, "CHECKED OUT...");
 			rowdy = 14;
 		}
-
+#endif
 		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
@@ -726,7 +732,7 @@ extern "C" void free_x16r(int thr_id)
 	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
-
+	cudaFree((void *)d_ark);
 	quark_blake512_cpu_free(thr_id);
 	quark_groestl512_cpu_free(thr_id);
 	x11_simd512_cpu_free(thr_id);
@@ -738,4 +744,33 @@ extern "C" void free_x16r(int thr_id)
 
 	cudaDeviceSynchronize();
 	init[thr_id] = false;
+}
+
+volatile int h_ark = 0;
+
+extern "C" int *_d_ark = NULL;
+static int q = 0;
+static int* skin = NULL;
+__host__
+void x11_echo512_cuda_init(int thr_id, uint32_t threads)
+{
+	if (q++) return;
+	cudaMalloc(&d_ark, (size_t)64);
+	skin = d_ark;
+	if ((uint64_t)d_ark & 15)
+	{
+		d_ark = (int*)((uint64_t)d_ark + ~((uint64_t)d_ark & 15));
+	}
+	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+}
+__host__ extern void x11_echo512_cpu_init(int thr_id, uint32_t threads)
+{
+	h_ark = -1;
+	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
+	applog(LOG_DEBUG, "fun");
+}
+__host__ extern void x13_echo512_cpu_init(int thr_id, uint32_t threads)
+{
+	h_ark ^= 1 << thr_id;
+	cudaMemcpyToSymbol(d_ark, (int*)&h_ark, sizeof(int), 0, cudaMemcpyHostToDevice);
 }

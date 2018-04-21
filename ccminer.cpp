@@ -147,6 +147,7 @@ int32_t device_led[MAX_GPUS] = { -1, -1 };
 int opt_led_mode = 0;
 int opt_cudaschedule = -1;
 static bool opt_keep_clocks = false;
+extern "C" volatile int *volatile d_ark = NULL;
 
 // un-linked to cmdline scrypt options (useless)
 int device_batchsize[MAX_GPUS] = { 0 };
@@ -1757,7 +1758,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 //		case ALGO_TIMETRAVEL:
 //		case ALGO_BITCORE:
 		case ALGO_X16R:
-		case ALGO_X16S:
+//		case ALGO_X16S:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));//(256.0 * opt_difficulty));
 			break;
 #if 0
@@ -1784,6 +1785,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	sctx->job.clean = 1; //!!!
 	return true;
 }
+__host__ extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
 
 void restart_threads(void)
 {
@@ -1791,7 +1793,10 @@ void restart_threads(void)
 		applog(LOG_DEBUG,"%s", __FUNCTION__);
 	// restart mining thread IRL
 	for (int i = 0; i < opt_n_threads && work_restart; i++)
+	{
 		work_restart[i].restart = 1;
+	}
+	x11_echo512_cpu_init(0, 1 << 21);
 }
 
 static bool wanna_mine(int thr_id)
@@ -2507,7 +2512,7 @@ static void *miner_thread(void *userdata)
 			break;
 #endif
 		case ALGO_X16S:
-			rc = scanhash_x16s(thr_id, &work, max_nonce, &hashes_done);
+//			rc = scanhash_x16s(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_X16R:
 //			try{
@@ -3913,8 +3918,49 @@ int main(int argc, char *argv[])
 	// get opt_quiet early
 	parse_single_opt('q', argc, argv);
 
-	printf("*** a1_min3r " PACKAGE_VERSION " for nVidia GPUs by a1i3nj03@users.noreply.github.com ***\n");
-	if (!opt_quiet) {
+	printf("*** a1i3n-min3r " PACKAGE_VERSION " for nVidia GPUs by a1i3nj03@users.noreply.github.com ***\n"
+		"                         ;;;;;;iiiii;;                          \n"
+		"                 i!!!!!!!!!!!!!!!~{:!!!!i\n"
+		"             i!~!!))!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		"          i!!!{!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!i\n"
+		"       i!!)!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		"    '!h!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		"  '!!`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!i\n"
+		"   /!!!~!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		"' ':)!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		"  ~:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		"..!!!!!\\!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		" `!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		" ~ ~!!!)!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!~\n"
+		"~~'~{!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!:'~ \n"
+		"{-{)!!{!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!:!\n"
+		"`!!!!{!~!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!':!!!\n"
+		"' {!!!{>)`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!)!~..\n"
+		":!{!!!{!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -!!:\n"
+		"    ~:!4~/!!!!!!!!!!!!!!!!!!!~!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		"     :~!!~)(!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		"      ``~!!).~!!!!!!!!!!!!!{!!!!!!!!!!!!!!!!!!!!!!!!!!!!!:\n"
+		"            ~  '!\\!!!!!!!!!!(!!!!!!!!!!!!!!!!!!!!!!4!!!~:\n"
+		"           '      '--`!!!!!!!!/:\\!!{!!((!~.~!!`?~-      :\n"
+		"              ``-.    `~!{!`)(>~/ \\~                   :\n"
+		"   .                \\  : `{{`. {-   .-~`              /\n"
+		"    .          !:       .\\\\?.{\\   :`      .          :!\n"
+		"    \\ :         `      -~!{:!!!\\ ~     :!`         .>!\n"
+		"    '  ~          '    '{!!!{!!!t                 ! !!\n"
+		"     '!  !.            {!!!!!!!!!              .~ {~!\n"
+		"      ~!!..`~:.       {!!!!!!!!!!:          .{~ :LS{\n"
+		"       `!!!!!!h:!?!!!!!!!!!!!!!(!!!!::..-~~` {!!!!.\n"
+		"         4!!!!!!!!!!!!!!!!!!!!!~!{!~!!!!!!!!!!!!'\n"
+		"          `!!!!!!!!!!!!!!!!!!!!(~!!!!!!!!!!!!!~\n"
+		"            `!!!!!!!!!!!{\\``!!``(!!!!!!!!!~~  .\n"
+		"             `!!!!!!!!!!!!!!!!!!!!!!!!(!:\n"
+		"               .!!!!!!!!!!!!!!!!!!!!!\\~ \n"
+		"               .`!!!!!!!/`.;;~;;`~!! '\n"
+		"                 -~!!!!!!!!!!!!!(!!/ .\n"
+		"                    `!!!!!!!!!!!!!!'\n"
+		"                      `\\!!!!!!!!!~\n"
+		"(Credit to http://www.asciiworld.com/-Aliens,128-.html )\n");
+		if (!opt_quiet) {
 		const char* arch = is_x64() ? "64-bits" : "32-bits";
 #ifdef _MSC_VER
 		printf("    Built with VC++ %d and nVidia CUDA SDK %d.%d %s\n\n", msver(),

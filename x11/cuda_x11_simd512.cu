@@ -25,8 +25,10 @@ __launch_bounds__(TPB52_2, 1)
 #else
 __launch_bounds__(TPB50_2, 4)
 #endif
-static void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, const uint4 *const __restrict__ g_fft4)
+static void x11_simd512_gpu_compress_64_maxwell(int *thr_id, uint32_t threads, uint32_t *g_hash, const uint4 *const __restrict__ g_fft4)
 {
+	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	const uint32_t thr_offset = thread << 6; // thr_id * 128 (je zwei elemente)
 	uint32_t IV[32];
@@ -89,11 +91,11 @@ __host__
 void x11_simd512_cpu_free(int thr_id){
 	cudaFree(d_temp4[thr_id]);
 }
-
+ 
 __host__
-void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash){
+void x11_simd512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash){
 
-	int dev_id = device_map[thr_id];
+	int dev_id = device_map[((uint64_t)thr_id) & 15];
 
 	uint32_t tpb = TPB52_1;
 	if (device_sm[dev_id] <= 500) tpb = TPB50_1;
@@ -105,6 +107,6 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash){
 	const dim3 grid2((threads + tpb - 1) / tpb);
 	const dim3 block2(tpb);
 
-	x11_simd512_gpu_expand_64 << <grid1, block1 >> > (threads, d_hash, d_temp4[thr_id]);
-	x11_simd512_gpu_compress_64_maxwell << < grid2, block2 >> > (threads, d_hash, d_temp4[thr_id]);
+	x11_simd512_gpu_expand_64 << <grid1, block1 >> > (thr_id, threads, d_hash, d_temp4[(uint64_t)thr_id & 15]);
+	x11_simd512_gpu_compress_64_maxwell << < grid2, block2 >> > (thr_id, threads, d_hash, d_temp4[(uint64_t)thr_id & 15]);
 }

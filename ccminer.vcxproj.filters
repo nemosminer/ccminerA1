@@ -611,6 +611,7 @@
     </ClInclude>
     <ClInclude Include="quark\groestl_functions_quad_a1_min3r.cuh" />
     <ClInclude Include="quark\groestl_transf_quad_a1_min3r.cuh" />
+    <ClInclude Include="cuda_helper_alexis.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">

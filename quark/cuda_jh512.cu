@@ -277,9 +277,12 @@ static void E8(uint32_t x[8][4])
 
 __global__
 //__launch_bounds__(256,2)
-void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash)
+void quark_jh512_gpu_hash_64(int *thr_id, const uint32_t threads, uint32_t* g_hash)
 {
+	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+
 	if (thread < threads)
 	{
 		//const uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -329,13 +332,13 @@ void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash)
 }
 
 __host__
-void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash)
+void quark_jh512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	quark_jh512_gpu_hash_64<<<grid, block>>>(threads, d_hash);
+	quark_jh512_gpu_hash_64 << <grid, block >> >(thr_id, threads, d_hash);
 }
 
 // Setup function
@@ -411,7 +414,7 @@ void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint3
 		AS_UINT4(&Hash[12]) = AS_UINT4(&x[7][0]);
 	}
 }
-
+ 
 __host__
 void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
 {
@@ -430,8 +433,11 @@ __constant__ static uint32_t c_JHState[32];
 __constant__ static uint32_t c_Message[4];
 
 __global__
-void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash)
+void jh512_gpu_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash)
 {
+//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
+//		return;
+
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -483,7 +489,7 @@ void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	jh512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_hash);
+	jh512_gpu_hash_80 << <grid, block >> > (thr_id, threads, startNounce, d_hash);
 }
 
 extern "C" {

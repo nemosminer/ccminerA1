@@ -2000,8 +2000,11 @@ const int i0, const int i1, const int i2, const int i3, const int i4, const int 
 
 
 __global__
-void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, void *outputHash, int swab)
+void oldwhirlpool_gpu_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, void *outputHash, int swab)
 {
+//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
+//		return;
+
 	__shared__ uint64_t sharedMemory[2048];
 
 	if (threadIdx.x < 256) {
@@ -2344,7 +2347,7 @@ void whirlpool512_hash_80_sm3(int thr_id, uint32_t threads, uint32_t startNonce,
 	if (threads < 256)
 		applog(LOG_WARNING, "whirlpool requires a minimum of 256 threads to fetch constant tables!");
 
-	oldwhirlpool_gpu_hash_80<<<grid, block>>>(threads, startNonce, d_outputHash, 1);
+	oldwhirlpool_gpu_hash_80 << <grid, block >> >(thr_id, threads, startNonce, d_outputHash, 1);
 }
 
 extern void whirl_midstate(void *state, const void *input);
@@ -2417,5 +2420,5 @@ void x16_whirlpool512_hash_80(int thr_id, const uint32_t threads, const uint32_t
 	if (threads < 256)
 		applog(LOG_WARNING, "whirlpool requires a minimum of 256 threads to fetch constant tables!");
 
-	oldwhirlpool_gpu_hash_80 <<<grid, block>>> (threads, startNonce, d_outputHash, 1);
+	oldwhirlpool_gpu_hash_80 << <grid, block >> > (thr_id, threads, startNonce, d_outputHash, 1);
 }

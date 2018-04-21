@@ -2,8 +2,8 @@
 	Based on Tanguy Pruvot's repo
 	Provos Alexis - 2016
 */
-
 //#include "cuda_helper.h"
+#include "miner.h"
 #include "cuda_helper_alexis.h"
 #include "cuda_vectors_alexis.h"
 
@@ -279,9 +279,12 @@ void x11_echo512_cpu_hash_64_final_alexis(int thr_id, uint32_t threads, uint32_t
 	x11_echo512_gpu_hash_64_final_alexis<<<grid, block>>>(threads, (uint64_t*)d_hash,d_resNonce,target);
 }
 
+
 __global__ __launch_bounds__(128, 5) /* will force 80 registers */
-static void x11_echo512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash)
+static void x11_echo512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_hash)
 {
+	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+		return;
 	__shared__ uint32_t sharedMemory[4][256];
 
 	aes_gpu_init128(sharedMemory);
@@ -436,15 +439,14 @@ static void x11_echo512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash)
 		*(uint2x4*)&Hash[ 0] = *(uint2x4*)&hash[ 0] ^ *(uint2x4*)&W[ 0];
 		*(uint2x4*)&Hash[ 8] = *(uint2x4*)&hash[ 8] ^ *(uint2x4*)&W[ 8];
 	}
-}
+} 
 
 __host__
-void x11_echo512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash){
+void x11_echo512_cpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *d_hash){
 
 	const uint32_t threadsperblock = 128;
-
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-
-	x11_echo512_gpu_hash_64_alexis<<<grid, block>>>(threads, d_hash);
+	x11_echo512_gpu_hash_64_alexis << <grid, block >> >(thr_id, threads, d_hash);
+//	x11_echo512_gpu_hash_64_alexis << <grid, block >> >((int*)((uint64_t)d_ark | (thr_id & 15)), threads, d_hash);
 }
