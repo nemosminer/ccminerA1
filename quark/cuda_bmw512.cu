@@ -8,7 +8,7 @@
 
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 
-//#include "cuda_bmw512_sm3.cuh"
+#include "cuda_bmw512_sm3.cuh"
 
 #ifdef __INTELLISENSE__
 /* just for vstudio code colors */
@@ -324,10 +324,9 @@ __launch_bounds__(64, 8)
 #endif
 void quark_bmw512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
 	if (thread < threads)
 	{
 		//uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -393,11 +392,8 @@ void quark_bmw512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 }
 
 __global__ __launch_bounds__(256, 2)
-void quark_bmw512_gpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
+void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
-//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
-//		return;
-
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -467,16 +463,16 @@ void quark_bmw512_cpu_setBlock_80(void *pdata)
 
 __host__
 void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash) // , int order)
-{ 
+{
 	const uint32_t threadsperblock = 128;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-//	int dev_id = device_map[thr_id];
+	int dev_id = device_map[thr_id];
 
-//	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
-	quark_bmw512_gpu_hash_80 << <grid, block >> >(thr_id, threads, startNounce, (uint64_t*)d_hash);
-//	else
-//		quark_bmw512_gpu_hash_80_30<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
+	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
+		quark_bmw512_gpu_hash_80<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
+	else
+		quark_bmw512_gpu_hash_80_30<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 }
 
 __host__
@@ -484,7 +480,7 @@ void quark_bmw512_cpu_init(int thr_id, uint32_t threads)
 {
 	cuda_get_arch(thr_id);
 }
- 
+
 __host__
 void quark_bmw512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
 {
@@ -492,9 +488,9 @@ void quark_bmw512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-//	int dev_id = device_map[thr_id];
-//	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
-	quark_bmw512_gpu_hash_64 << <grid, block >> >(thr_id, threads, (uint64_t*)d_hash);
-//	else
-//		quark_bmw512_gpu_hash_64_30<<<grid, block>>>(threads, (uint64_t*)d_hash);
+	int dev_id = device_map[((uintptr_t)thr_id) & 15];
+	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
+		quark_bmw512_gpu_hash_64<<<grid, block>>>(thr_id, threads, (uint64_t*)d_hash);
+	else
+		quark_bmw512_gpu_hash_64_30<<<grid, block>>>(thr_id, threads, (uint64_t*)d_hash);
 }

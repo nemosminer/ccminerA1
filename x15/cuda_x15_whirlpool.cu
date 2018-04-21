@@ -41,8 +41,9 @@ extern "C" {
 #include <miner.h>
 }
 
-#include "cuda_helper_alexis.h"
-#include "cuda_vectors_alexis.h"
+#include <cuda_helper.h>
+#include <cuda_vector_uint2x4.h>
+#include <cuda_vectors.h>
 
 #define xor3x(a,b,c) (a^b^c)
 
@@ -620,7 +621,7 @@ __global__
 __launch_bounds__(TPB64,2)
 void x15_whirlpool_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
 	__shared__ uint2 sharedMemory[7][256];
 
@@ -735,7 +736,7 @@ static void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_
 
 	x15_whirlpool_gpu_hash_64 <<<grid, block>>> (threads, (uint64_t*)d_hash);
 }
-*/ 
+*/
 __host__
 void x15_whirlpool_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
 {

@@ -200,8 +200,6 @@ do {                                                                  \
 	}                                                                 \
 } while (0)
 
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, uint32_t situation, int thr_id);
-
 /*********************************************************************/
 #if !defined(__CUDA_ARCH__) || defined(_WIN64)
 #define USE_XOR_ASM_OPTS 0

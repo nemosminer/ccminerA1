@@ -5,7 +5,6 @@
 #include "miner.h"
 
 // Should stay outside the ifdef on WIN64 (wtf)
-#include "cuda_helper_alexis.h"
 #include "cuda_vector_uint2x4.h"
 __constant__ static uint2 c_PaddedM[16];
 __constant__ static uint2x4 c_Hostprecalc[4];
@@ -93,10 +92,9 @@ __launch_bounds__(256, 1)
 #endif
 void quark_blake512_gpu_hash_64_sp(int *thr_id, uint32_t threads, uint2* g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
 
 	if (thread < threads)
 	{
@@ -338,11 +336,8 @@ void quark_blake512_gpu_hash_64_sp(int *thr_id, uint32_t threads, uint2* g_hash)
 
 __global__
 __launch_bounds__(128, 8)
-void quark_blake512_gpu_hash_80_sp(int thr_id, uint32_t threads, uint32_t startNounce, uint2 *outputHash)
+void quark_blake512_gpu_hash_80_sp(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
-//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
-//		return;
-
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -654,8 +649,8 @@ __host__ void quark_blake512_cpu_setBlock_80_sp(int thr_id, uint64_t *pdata)
 #else
 // __CUDA_ARCH__ < 500
 __host__ void quark_blake512_cpu_setBlock_80_sp(int thr_id, uint64_t *pdata) {}
-__global__ void quark_blake512_gpu_hash_64_sp(int*, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ g_hash) {}
-__global__ void quark_blake512_gpu_hash_80_sp(int*, uint32_t startNounce, uint2 *outputHash) {}
+__global__ void quark_blake512_gpu_hash_64_sp(uint32_t, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ g_hash) {}
+__global__ void quark_blake512_gpu_hash_80_sp(uint32_t, uint32_t startNounce, uint2 *outputHash) {}
 #endif
 
 __host__
@@ -668,10 +663,10 @@ void quark_blake512_cpu_hash_64_sp(int *thr_id, uint32_t threads, uint32_t *d_ou
 }
 
 __host__
-void quark_blake512_cpu_hash_80_sp(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
+void quark_blake512_cpu_hash_80_sp(uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
 {
 	const uint32_t threadsperblock = 64;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	quark_blake512_gpu_hash_80_sp << <grid, block >> >(thr_id, threads, startNounce, (uint2*)d_outputHash);
+	quark_blake512_gpu_hash_80_sp <<<grid, block>>>(threads, startNounce, (uint2*)d_outputHash);
 }

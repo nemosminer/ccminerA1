@@ -611,7 +611,6 @@
     </ClInclude>
     <ClInclude Include="quark\groestl_functions_quad_a1_min3r.cuh" />
     <ClInclude Include="quark\groestl_transf_quad_a1_min3r.cuh" />
-    <ClInclude Include="cuda_helper_alexis.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">
@@ -1017,7 +1016,6 @@
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_hamsi512_alexis.cu" />
-    <CudaCompile Include="x16\x16s.cu" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico">

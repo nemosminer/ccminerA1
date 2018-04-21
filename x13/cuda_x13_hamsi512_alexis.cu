@@ -177,7 +177,7 @@ static __constant__ const uint32_t d_T512[1024] = {
 __global__ __launch_bounds__(384,2)
 void x13_hamsi512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -288,7 +288,7 @@ void x13_hamsi512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_
 	}
 }
 
-__host__ 
+__host__
 void x13_hamsi512_cpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 384;
@@ -296,6 +296,6 @@ void x13_hamsi512_cpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *d_
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x13_hamsi512_gpu_hash_64_alexis << <grid, block >> >(thr_id, threads, d_hash);
+	x13_hamsi512_gpu_hash_64_alexis<<<grid, block>>>(thr_id, threads, d_hash);
 
 }

@@ -118,11 +118,10 @@ void quark_blake512_compress(uint64_t *h, const uint64_t *block, const uint8_t (
 __global__ __launch_bounds__(256, 4)
 void quark_blake512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
 #if !defined(SP_KERNEL) || __CUDA_ARCH__ < 500
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
 
 #if USE_SHUFFLE
 	const uint32_t warpBlockID = (thread + 15)>>4; // aufrunden auf volle Warp-Blöcke
@@ -188,12 +187,9 @@ void quark_blake512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 }
 
 __global__ __launch_bounds__(256,4)
-void quark_blake512_gpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHash)
+void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
 //#if !defined(SP_KERNEL) || __CUDA_ARCH__ < 500
-//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
-//		return;
-
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -242,9 +238,9 @@ void quark_blake512_gpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 
 __host__
 void quark_blake512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_outputHash)
-{ 
+{
 #ifdef SP_KERNEL
-	int dev_id = device_map[((uint64_t)thr_id)&15];
+	int dev_id = device_map[((uintptr_t)thr_id) & 15];
 	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500)
 		quark_blake512_cpu_hash_64_sp(thr_id, threads, d_outputHash);
 	else
@@ -260,11 +256,11 @@ void quark_blake512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_outpu
 
 __host__
 void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
-{ 
+{
 #ifdef SP_KERNEL
 	int dev_id = device_map[thr_id];
 	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500)
-		quark_blake512_cpu_hash_80_sp(thr_id, threads, startNounce, d_outputHash);
+		quark_blake512_cpu_hash_80_sp(threads, startNounce, d_outputHash);
 	else
 #endif
 	{
@@ -272,7 +268,7 @@ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 		dim3 grid((threads + threadsperblock-1)/threadsperblock);
 		dim3 block(threadsperblock);
 
-		quark_blake512_gpu_hash_80 << <grid, block >> >(thr_id, threads, startNounce, d_outputHash);
+		quark_blake512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
 	}
 }
 

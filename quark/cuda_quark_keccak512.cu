@@ -98,11 +98,9 @@ static void keccak_block(uint2 *s)
 __global__
 void quark_keccak512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
-
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
 	if (thread < threads)
 	{
 		//uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -201,10 +199,9 @@ static void keccak_block_v30(uint64_t *s, const uint32_t *in)
 __global__
 void quark_keccak512_gpu_hash_64_v30(int *thr_id, uint32_t threads, uint64_t *g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
 	if (thread < threads)
 	{
 		//uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -239,7 +236,7 @@ void quark_keccak512_gpu_hash_64_v30(int *thr_id, uint32_t threads, uint64_t *g_
 			outpHash[i] = hash[i];
 	}
 }
- 
+
 __host__
 void quark_keccak512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
 {
@@ -248,7 +245,7 @@ void quark_keccak512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	int dev_id = device_map[((uint64_t)thr_id) & 15];
+	int dev_id = device_map[((uintptr_t)thr_id) & 15];
 
 	if (device_sm[dev_id] >= 320)
 		quark_keccak512_gpu_hash_64 << <grid, block >> >(thr_id, threads, (uint64_t*)d_hash);

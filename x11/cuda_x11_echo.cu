@@ -299,13 +299,13 @@ void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 		cuda_echo_round(sharedMemory, Hash);
 	}
 }
-/*
+
 __host__
-void x11_echo512_cpu_init(int thr_id, uint32_t threads)
+void X11_echo512_cpu_init(int thr_id, uint32_t threads)
 {
 	aes_cpu_init(thr_id);
 }
-*/
+
 __host__
 void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {

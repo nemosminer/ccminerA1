@@ -468,7 +468,7 @@ __launch_bounds__(TPB50, 5)
 #endif
 void quark_skein512_gpu_hash_64(int *thr_id, const uint32_t threads, uint64_t* __restrict__ g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -758,13 +758,13 @@ void quark_skein512_gpu_hash_64(int *thr_id, const uint32_t threads, uint64_t* _
 		#undef h7
 	}
 }
- 
+
 __host__
 //void quark_skein512_cpu_hash_64(int thr_id,uint32_t threads, uint32_t *d_nonceVector, uint32_t *d_hash)
 void quark_skein512_cpu_hash_64(int *thr_id, const uint32_t threads, uint32_t *d_hash)
 {
 	uint32_t tpb = TPB52;
-	int dev_id = device_map[((uint64_t)thr_id) & 15];
+	int dev_id = device_map[((uintptr_t)thr_id) & 15];
 
 	if (device_sm[dev_id] <= 500) tpb = TPB50;
 	const dim3 grid((threads + tpb-1)/tpb);
@@ -782,11 +782,8 @@ __launch_bounds__(TPB52, 3)
 #else
 __launch_bounds__(TPB50, 5)
 #endif
-void skein512_gpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *output64)
+void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output64)
 {
-//	if (*(int*)((uint64_t)thr_id & ~15) & (1 << ((uint64_t)thr_id & 15)))
-//		return;
-
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -957,7 +954,7 @@ void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, ui
 	const dim3 block(tpb);
 
 	// hash function is cut in 2 parts to reduce kernel size
-	skein512_gpu_hash_80 << < grid, block >> > (thr_id, threads, startNounce, (uint64_t*)d_hash);
+	skein512_gpu_hash_80 <<< grid, block >>> (threads, startNounce, (uint64_t*)d_hash);
 }
 
 __host__

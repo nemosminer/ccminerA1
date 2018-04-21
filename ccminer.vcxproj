@@ -269,7 +269,6 @@
     <ClCompile Include="lyra2\Lyra2.c" />
     <ClCompile Include="lyra2\Sponge.c" />
     <ClCompile Include="lyra2\Lyra2Z.c" />
-    <ClInclude Include="cuda_helper_alexis.h" />
     <ClInclude Include="equi\eqcuda.hpp" />
     <ClInclude Include="equi\equihash.h" />
     <ClInclude Include="neoscrypt\neoscrypt.h" />
@@ -464,7 +463,6 @@
     <CudaCompile Include="x16r\cuda_x16_fugue512.cu" />
     <CudaCompile Include="x16r\cuda_x16_shabal512.cu" />
     <CudaCompile Include="x16r\cuda_x16_simd512_80.cu" />
-    <CudaCompile Include="x16\x16s.cu" />
     <CudaCompile Include="zr5.cu" />
     <CudaCompile Include="heavy\cuda_blake512.cu">
     </CudaCompile>

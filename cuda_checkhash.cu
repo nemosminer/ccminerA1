@@ -192,71 +192,10 @@ void cuda_checkhash_32(uint32_t threads, uint32_t startNounce, uint32_t *hash, u
 	}
 }
 
-cudaError_t MyStreamSynchronize(cudaStream_t stream, uint32_t situation, int thr_id)
-{
-	cudaError_t result = cudaSuccess;
-	if (abort_flag)
-		return result;
-	if (situation >= 0)
-	{
-		if (cudaStreamQuery(stream) == cudaErrorNotReady)
-		{
-			while ((work_restart[thr_id].restart == 0) && cudaStreamQuery(stream) == cudaErrorNotReady)
-			{
-				usleep((useconds_t)(1000));
-			}
-			if (work_restart[thr_id].restart)
-				return cudaErrorInvalidDevice;
-			result = cudaStreamSynchronize(stream);
-		}
-	}
-	else
-		result = cudaStreamSynchronize(stream);
-	return result;
-}
-/*
-uint32_t glhf;
-__host__
-void chk(int thr_id)
-{
-	int size = 128;
-	int* h_val = (int*)malloc(sizeof(int)*size);
-	bool * h_flag = new bool;
-	*h_flag = true;
-
-	bool* d_flag;
-	cudaMalloc(&d_flag, sizeof(bool));
-	cudaMemcpy(d_flag, h_flag, 1, cudaMemcpyHostToDevice);
-
-	int* d_val;
-	cudaMalloc(&d_val, sizeof(int)*size);
-
-	for (int i = 0; i<size; i++){
-		h_val[i] = i;
-	}
-	cudaMemcpy(d_val, h_val, size, cudaMemcpyHostToDevice);
-
-	int BSIZE = 32;
-	int nblocks = size / BSIZE;
-	printf("%i,%i", nblocks, BSIZE);
-	stopme << <nblocks, BSIZE >> >(d_flag, d_val, size);
-
-	//--------------sleep for a while --------------------------
-
-	*h_flag = false;
-	cudaMemcpy(d_flag, h_flag, 1, cudaMemcpyHostToDevice);
-
-	glhf = 0
-	cudaMemcpy(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
-	//
-}
-*/
 __host__
 uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash)
 {
 	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
-//	if (MyStreamSynchronize(NULL, (uint32_t)1, thr_id) == cudaErrorInvalidDevice)
-//		return 0;
 
 	const uint32_t threadsperblock = 512;
 
@@ -272,7 +211,7 @@ uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	}
 
 	cuda_checkhash_64 <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNonces[thr_id]);
-//	cudaThreadSynchronize();
+	cudaThreadSynchronize();
 
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return h_resNonces[thr_id][0];

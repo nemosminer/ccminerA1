@@ -108,7 +108,7 @@ bool use_colors = true;
 int use_pok = 0;
 static bool opt_background = false;
 bool opt_quiet = false;
-int opt_maxlograte = 3;
+int opt_maxlograte = 5;//3;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_time_limit = -1;
@@ -147,7 +147,6 @@ int32_t device_led[MAX_GPUS] = { -1, -1 };
 int opt_led_mode = 0;
 int opt_cudaschedule = -1;
 static bool opt_keep_clocks = false;
-extern "C" volatile int *volatile d_ark = NULL;
 
 // un-linked to cmdline scrypt options (useless)
 int device_batchsize[MAX_GPUS] = { 0 };
@@ -302,7 +301,6 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x16r        X16R (Raven)\n\
-			x16s        X16S\n\
 			x17         X17\n\
 			wildkeccak  Boolberry\n\
 			zr5         ZR5 (ZiftrCoin)\n\
@@ -685,25 +683,24 @@ static void calc_network_diff(struct work *work)
 	int16_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 
 	uint64_t diffone = 0x0000FFFF00000000ull;
-
+	/*
 	double d = (double)0x0000ffff / (double)bits;
 
 	for (int m=shift; m < 29; m++) d *= 256.0;
 	for (int m=29; m < shift; m++) d /= 256.0;
+	*/
 
-	/*
 	uint32_t d = 0x0000ffff / bits;
 
 	for (int m = shift; m < 29; m++) d <<= 8;
 	for (int m = 29; m < shift; m++) d >>= 8;
-	*/
+
 	//	if (opt_algo == ALGO_DECRED && shift == 28) d *= 256.0;
 	if (opt_debug_diff)
-//		applog(LOG_DEBUG, "net diff: %u -> shift %u, bits %08x", d, shift, bits);
-		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
+		applog(LOG_DEBUG, "net diff: %u -> shift %u, bits %08x", d, shift, bits);
+//		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
 
-	net_diff = d;
-//	net_diff = (double)d;
+	net_diff = (double)d;
 }
 
 /* decode data from getwork (wallets and longpoll pools) */
@@ -1758,7 +1755,6 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 //		case ALGO_TIMETRAVEL:
 //		case ALGO_BITCORE:
 		case ALGO_X16R:
-//		case ALGO_X16S:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));//(256.0 * opt_difficulty));
 			break;
 #if 0
@@ -1785,12 +1781,13 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	sctx->job.clean = 1; //!!!
 	return true;
 }
+
 __host__ extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
 
 void restart_threads(void)
 {
 	if (opt_debug && !opt_quiet)
-		applog(LOG_DEBUG,"%s", __FUNCTION__);
+		applog(LOG_DEBUG, "%s", __FUNCTION__);
 	// restart mining thread IRL
 	for (int i = 0; i < opt_n_threads && work_restart; i++)
 	{
@@ -2511,9 +2508,6 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_x15(thr_id, &work, max_nonce, &hashes_done);
 			break;
 #endif
-		case ALGO_X16S:
-//			rc = scanhash_x16s(thr_id, &work, max_nonce, &hashes_done);
-			break;
 		case ALGO_X16R:
 //			try{
 				rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done);
@@ -2656,8 +2650,8 @@ static void *miner_thread(void *userdata)
 
 			work.submit_nonce_id = 0;
 			nonceptr[0] = work.nonces[0];
-			if (work_restart[thr_id].restart)
-				continue;
+//			if (work_restart[thr_id].restart)
+//				continue;
 			if (!submit_work(mythr, &work))
 				break;
 			nonceptr[0] = curnonce;
@@ -2682,8 +2676,8 @@ static void *miner_thread(void *userdata)
 					work.data[22] = 0;
 				}
 #endif
-				if (work_restart[thr_id].restart)
-					continue;
+//				if (work_restart[thr_id].restart)
+//					continue;
 				if (!submit_work(mythr, &work))
 					break;
 				nonceptr[0] = curnonce;
@@ -3960,7 +3954,7 @@ int main(int argc, char *argv[])
 		"                    `!!!!!!!!!!!!!!'\n"
 		"                      `\\!!!!!!!!!~\n"
 		"(Credit to http://www.asciiworld.com/-Aliens,128-.html )\n");
-		if (!opt_quiet) {
+	if (!opt_quiet) {
 		const char* arch = is_x64() ? "64-bits" : "32-bits";
 #ifdef _MSC_VER
 		printf("    Built with VC++ %d and nVidia CUDA SDK %d.%d %s\n\n", msver(),

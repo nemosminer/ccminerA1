@@ -100,7 +100,6 @@ other[i].__X = (__byte_perm(other[i].__X, 0, 0x1032) & -(threadIdx.x & 1)) | (in
 input[i].__X = __shfl((int)input[i].__X, n ^ (3 & -(n < 1 || n > 2)), 4);\
 
 input[i].__X = __shfl((int)input[i].__X, n ^ (3 & -(n >= 1 && n <= 2)), 4);\
-input[i].__X = __shfl((int)input[i].__X, n ^ (3 & ((n >= 1 && n <= 2) | ((n >= 1 && n <= 2)<<1), 4);\
 */
 //input[i].__X = (__byte_perm(input[i].__X, 0, 0x1032) & (-(threadIdx.x & 1) | (-(threadIdx.x & 1) & input[i].__X));
 //other[i].__X = (__byte_perm(other[i].__X, 0, 0x1032) & (-(threadIdx.x & 1) | (-(threadIdx.x & 1) & input[i].__X));

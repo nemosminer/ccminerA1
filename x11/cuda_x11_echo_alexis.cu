@@ -2,14 +2,13 @@
 	Based on Tanguy Pruvot's repo
 	Provos Alexis - 2016
 */
+
 //#include "cuda_helper.h"
-#include "miner.h"
 #include "cuda_helper_alexis.h"
 #include "cuda_vectors_alexis.h"
 
 #define INTENSIVE_GMF
-//#include "cuda_x11_aes_alexis.cuh"
-#include "../x11/cuda_x11_echo_aes.cuh"
+#include "cuda_x11_aes_alexis.cuh"
 
 __device__
 static void echo_round_alexis(const uint32_t sharedMemory[4][256], uint32_t *W, uint32_t &k0){
@@ -270,12 +269,6 @@ static void x11_echo512_gpu_hash_64_final_alexis(uint32_t threads, uint64_t *g_h
 }
 
 __host__
-void X11_shavite512_cpu_init(int thr_id, uint32_t threads)
-{
-	aes_cpu_init(thr_id);
-}
-
-__host__
 void x11_echo512_cpu_hash_64_final_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, uint32_t *d_resNonce, const uint64_t target)
 {
 	const uint32_t threadsperblock = 256;
@@ -286,11 +279,10 @@ void x11_echo512_cpu_hash_64_final_alexis(int thr_id, uint32_t threads, uint32_t
 	x11_echo512_gpu_hash_64_final_alexis<<<grid, block>>>(threads, (uint64_t*)d_hash,d_resNonce,target);
 }
 
-
 __global__ __launch_bounds__(128, 5) /* will force 80 registers */
 static void x11_echo512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_hash)
 {
-	if ((*(int*)(((uint64_t)thr_id) & ~15ULL)) & (1 << (((uint64_t)thr_id) & 15)))
+	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & (1 << (((uintptr_t)thr_id) & 15)))
 		return;
 	__shared__ uint32_t sharedMemory[4][256];
 
@@ -446,14 +438,15 @@ static void x11_echo512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32
 		*(uint2x4*)&Hash[ 0] = *(uint2x4*)&hash[ 0] ^ *(uint2x4*)&W[ 0];
 		*(uint2x4*)&Hash[ 8] = *(uint2x4*)&hash[ 8] ^ *(uint2x4*)&W[ 8];
 	}
-} 
+}
 
 __host__
 void x11_echo512_cpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *d_hash){
 
 	const uint32_t threadsperblock = 128;
+
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
+
 	x11_echo512_gpu_hash_64_alexis << <grid, block >> >(thr_id, threads, d_hash);
-//	x11_echo512_gpu_hash_64_alexis << <grid, block >> >((int*)((uint64_t)d_ark | (thr_id & 15)), threads, d_hash);
 }
