@@ -2,7 +2,7 @@
 
 Download here: https://github.com/a1i3nj03/a1min3r/releases
 
-use like this: ccminer -o stratum+tcp://pool.ominousnetwork.com:3636 - mywalletisbetterthanurs.TR_FTW -p password123
+use like this: ccminer -o stratum+tcp://pool.ominousnetwork.com:3636 -u mywalletisbetterthanurs.TR_FTW -p password123
 
 Send RVN to RP6cmcZNE9g5oEakzCb88DgVJSLVBYJwnu PLZ
 
