@@ -1,15 +1,12 @@
 # ccminer
 
-Download here: https://github.com/a1i3nj03/a1_min3r/releases
+Download here: https://github.com/a1i3nj03/a1min3r/releases
 
 use like this: ccminer -o stratum+tcp://pool.ominousnetwork.com:3636 - mywalletisbetterthanurs.TR_FTW -p password123
 
-Younger better faster
+Send RVN to RP6cmcZNE9g5oEakzCb88DgVJSLVBYJwnu PLZ
 
-I R broke'd, send me (a1i3nj03) RVN coinz @ RP6cmcZNE9g5oEakzCb88DgVJSLVBYJwnu PLZ
-
-(Always) Forget to add dev fee :sadparrot:
-
+Contains no dev fee
 
 Based on Christian Buchner's &amp; Christian H.'s CUDA project, no more active on github since 2014.
 
