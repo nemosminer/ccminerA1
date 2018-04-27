@@ -246,7 +246,7 @@ static void SMIX_LDG(const uint32_t shared[4][256], uint32_t &x0,uint32_t &x1,ui
 __global__ __launch_bounds__(256,3)
 void x13_fugue512_gpu_hash_64_alexis(uint32_t threads, uint64_t *g_hash, int *order)
 {
-	if (*order) { __syncthreads(); return; }
+	if (*order) { return; }
 	__shared__ uint32_t shared[4][256];
 
 	if(threadIdx.x < 256){

@@ -98,7 +98,7 @@ static void keccak_block(uint2 *s)
 __global__
 void quark_keccak512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
 {
-	if (*order) { __syncthreads(); return; }
+	if (*order) { return; }
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{

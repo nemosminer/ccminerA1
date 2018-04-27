@@ -218,7 +218,7 @@ static void Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
 __global__
 void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *zombie_pigman)
 {
-	if (*zombie_pigman) { __syncthreads(); return; }
+	if (*zombie_pigman) { return; }
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{

@@ -282,7 +282,7 @@ void x11_echo512_cpu_hash_64_final_alexis(int thr_id, uint32_t threads, uint32_t
 __global__ __launch_bounds__(128, 5) /* will force 80 registers */
 static void x11_echo512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *order)
 {
-	if (*order) { __syncthreads(); return; }
+	if (*order) { return; }
 	__shared__ uint32_t sharedMemory[4][256];
 
 	aes_gpu_init128(sharedMemory);

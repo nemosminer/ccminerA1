@@ -590,7 +590,7 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 __global__ __launch_bounds__(TPB, 4)
 void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp4, int *order)
 {
-	if (*order) { __syncthreads(); return; }
+	if (*order) { return; }
 	int threadBloc = (blockDim.x * blockIdx.x + threadIdx.x) >> 3;
 	if (threadBloc < threads)
 	{
@@ -636,7 +636,7 @@ void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_s
 __global__ __launch_bounds__(TPB, 2)
 void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order)
 {
-	if (*order) { __syncthreads(); return; }
+	if (*order) { return; }
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{

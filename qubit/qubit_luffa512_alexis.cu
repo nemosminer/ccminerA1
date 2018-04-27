@@ -689,7 +689,7 @@ __global__
 __launch_bounds__(384,2)
 void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *order)
 {
-	if (*order) { __syncthreads(); return; }
+	if (*order) { return; }
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t statebuffer[8];
 	
