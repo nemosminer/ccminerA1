@@ -1,3 +1,4 @@
+#if 0
 /*
  * Copyright 2009 Colin Percival, 2011 ArtForz, 2011-2013 pooler
  * All rights reserved.
@@ -1103,3 +1104,4 @@ void scrypthash(void* output, const void* input)
 
 	free(scratchbuf);
 }
+#endif

@@ -1,3 +1,4 @@
+
 // Memory-hard extension of keccak for PoW
 // Copyright (c) 2012-2013 The Cryptonote developers
 // Copyright (c) 2014 The Boolberry developers

@@ -3,6 +3,7 @@
 
 #include "cuda_helper.h"
 #include "miner.h"
+extern cudaStream_t streamk[MAX_GPUS];
 
 // ZR5
 __constant__ uint32_t d_OriginalData[20];
@@ -109,10 +110,9 @@ __host__
 void jackpot_keccak512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
-	cudaMemcpyToSymbol( c_keccak_round_constants,
-						host_keccak_round_constants,
-						sizeof(host_keccak_round_constants),
-						0, cudaMemcpyHostToDevice);
+//	cudaMemcpyToSymbol(c_keccak_round_constants, host_keccak_round_constants, sizeof(host_keccak_round_constants), 0, cudaMemcpyHostToDevice);
+
+	cudaMemcpyToSymbol( c_keccak_round_constants, host_keccak_round_constants, sizeof(host_keccak_round_constants), 0, cudaMemcpyHostToDevice);
 }
 
 #define cKeccakB    1600
@@ -443,7 +443,7 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 
 // inlen kann 72...143 betragen
 __host__
-void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen)
+void jackpot_keccak512_cpu_setBlock(int thr_id, void *pdata, size_t inlen)
 {
 	const unsigned char *in = (const unsigned char*)pdata;
 
@@ -459,10 +459,9 @@ void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen)
 
 	// Copy state of the first round (72 Bytes)
 	// in Constant Memory
-	cudaMemcpyToSymbol( c_State,
-						state,
-						sizeof(state),
-						0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_State, state, sizeof(state), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_State, state, sizeof(state), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_State, state, sizeof(state), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 
 	// second part
 	memcpy(temp, in, inlen);
@@ -471,10 +470,8 @@ void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen)
 	temp[cKeccakR_SizeInBytes-1] |= 0x80;
 
 	// Copy rest of the message in constant memory
-	cudaMemcpyToSymbol( c_PaddedMessage,
-						temp,
-						cKeccakR_SizeInBytes,
-						0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_PaddedMessage, temp, cKeccakR_SizeInBytes, 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_PaddedMessage, temp, cKeccakR_SizeInBytes, 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 __global__
@@ -529,7 +526,8 @@ void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNoun
 
 	size_t shared_size = 0;
 
-	jackpot_keccak512_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash);
+	jackpot_keccak512_gpu_hash << <grid, block, shared_size>> >(threads, startNounce, (uint64_t*)d_hash);
+//	jackpot_keccak512_gpu_hash << <grid, block, shared_size, streamk[thr_id] >> >(threads, startNounce, (uint64_t*)d_hash);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 

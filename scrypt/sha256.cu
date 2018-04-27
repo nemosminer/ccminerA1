@@ -1,3 +1,4 @@
+#if 0
 //
 //  =============== SHA256 part on nVidia GPU ======================
 //
@@ -435,3 +436,4 @@ void post_sha256(int thr_id, int stream, int throughput)
 
 	cuda_post_sha256<<<grid, block, 0, context_streams[stream][thr_id]>>>(context_hash[stream][thr_id], context_tstate[stream][thr_id], context_ostate[stream][thr_id], context_odata[stream][thr_id]);
 }
+#endif

@@ -4,7 +4,9 @@
 
 #include <miner.h>
 #include "cuda_helper.h"
+//#include "cuda_helper_alexis.h"
 #include "cuda_vectors_alexis.h"
+extern cudaStream_t streamk[MAX_GPUS];
 
 static unsigned char PaddedMessage[128];
 __constant__ uint64_t c_PaddedMessage80[10]; // padded message (80 bytes + padding)
@@ -675,7 +677,8 @@ void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t st
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	qubit_luffa512_gpu_hash_80_alexis<<<grid, block>>> (threads, startNounce, d_outputHash);
+	qubit_luffa512_gpu_hash_80_alexis << <grid, block>> > (threads, startNounce, d_outputHash);
+//	qubit_luffa512_gpu_hash_80_alexis << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, d_outputHash);
 }
 
 //#if __CUDA_ARCH__ == 500
@@ -684,10 +687,9 @@ void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t st
 
 __global__
 __launch_bounds__(384,2)
-void x11_luffa512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_hash)
+void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*order) { __syncthreads(); return; }
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t statebuffer[8];
 	
@@ -706,7 +708,7 @@ void x11_luffa512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_
 
 		*(uint2x4*)&hash[0] = __ldg4(&Hash[0]);
 		*(uint2x4*)&hash[8] = __ldg4(&Hash[1]);
-		
+//		__syncthreads();
 		#pragma unroll 8
 		for(int i=0;i<8;i++){
 			statebuffer[i] = cuda_swab32(hash[i]);
@@ -746,7 +748,7 @@ void x11_luffa512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_
 	}
 }
 
-__host__ void qubit_cpu_precalc()
+__host__ void qubit_cpu_precalc(int thr_id)
 {
 	uint32_t tmp,i,j;
 	uint32_t statebuffer[8];
@@ -817,27 +819,34 @@ __host__ void qubit_cpu_precalc()
 			statechainv[8 * j + i] ^= t[8 * ((j + 4) % 5) + i];
 		}
 	}
-	cudaMemcpyToSymbol(statebufferpre, statebuffer, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(statechainvpre, statechainv, 40 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(statebufferpre, statebuffer, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(statechainvpre, statechainv, 40 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(statebufferpre, statebuffer, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
+//	cudaMemcpyToSymbolAsync(statechainvpre, statechainv, 40 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 __host__
-void qubit_luffa512_cpu_setBlock_80_alexis(void *pdata)
+void qubit_luffa512_cpu_setBlock_80_alexis(int thr_id, void *pdata)
 {
 	memcpy(PaddedMessage, pdata, 80);
 
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 10*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
-	qubit_cpu_precalc();
+//	CUDA_SAFE_CALL(cudaMemcpy(c_PaddedMessage80, PaddedMessage, 10 * sizeof(uint64_t), cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(c_PaddedMessage80, PaddedMessage, 10 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice, 0));
+//	CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(c_PaddedMessage80, PaddedMessage, 10 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice, streamk[thr_id]));
+	qubit_cpu_precalc(thr_id);
 }
 
 __host__
-void x11_luffa512_cpu_hash_64_alexis(int *thr_id, uint32_t threads,uint32_t *d_hash)
+void x11_luffa512_cpu_hash_64_alexis(int thr_id, uint32_t threads,uint32_t *d_hash, int *order)
 {
     const uint32_t threadsperblock = 384;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
-
-	x11_luffa512_gpu_hash_64_alexis << <grid, block >> >(thr_id, threads, d_hash);
+	x11_luffa512_gpu_hash_64_alexis << <grid, block>> >(threads, d_hash, order);
+//	if (thr_id < MAX_GPUS)
+//		x11_luffa512_gpu_hash_64_alexis << <grid, block, 0, streamk[thr_id] >> >(threads, d_hash, order);
+//	else
+//		x11_luffa512_gpu_hash_64_alexis << <grid, block, 0, streamk[thr_id + MAX_GPUS] >> >(threads, d_hash, order);
 }

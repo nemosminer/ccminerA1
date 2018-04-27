@@ -1,5 +1,6 @@
 
 #include <cuda_helper.h>
+extern cudaStream_t streamk[MAX_GPUS];
 
 #define TPB 256
 
@@ -243,8 +244,10 @@ uint32_t ROL16(const uint32_t a) {
 /***************************************************/
 __global__
 __launch_bounds__(TPB)
-void x13_fugue512_gpu_hash_64(uint32_t threads, uint64_t *g_hash)
+void x13_fugue512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
 {
+	if (*order)
+		return;
 	__shared__ uint32_t mixtabs[1024];
 
 	// load shared mem (with 256 threads)
@@ -394,12 +397,12 @@ void x13_fugue512_cpu_free(int thr_id)
 
 __host__
 //void fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash)
-void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = TPB;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x13_fugue512_gpu_hash_64 <<<grid, block>>> (threads, (uint64_t*)d_hash);
+	x13_fugue512_gpu_hash_64 <<<grid, block, 0, streamk[thr_id]>>> (threads, (uint64_t*)d_hash, order);
 }

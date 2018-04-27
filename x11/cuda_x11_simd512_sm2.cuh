@@ -532,8 +532,9 @@ void SIMDHash(const uint32_t *data, uint32_t *hashval)
 
 /***************************************************/
 __global__
-void x11_simd512_gpu_hash_64_sm2(int *thr_id, const uint32_t threads, const uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x11_simd512_gpu_hash_64_sm2(const uint32_t threads, const uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, int *order)
 {
+	if (*order) return;
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -547,13 +548,14 @@ void x11_simd512_gpu_hash_64_sm2(int *thr_id, const uint32_t threads, const uint
 }
 
 #else
-__global__ void x11_simd512_gpu_hash_64_sm2(int *thr_id, const uint32_t threads, const uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector) {}
+__global__ void x11_simd512_gpu_hash_64_sm2(const uint32_t threads, const uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, int *order) {}
 #endif /* __CUDA_ARCH__ < 300 */
 
 __host__
 static void x11_simd512_cpu_init_sm2(int thr_id)
 {
 #ifndef DEVICE_DIRECT_CONSTANTS
+	123
 	cudaMemcpyToSymbol( c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol( c_FFT128_8_16_Twiddle, h_FFT128_8_16_Twiddle, sizeof(h_FFT128_8_16_Twiddle), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol( c_FFT256_2_128_Twiddle, h_FFT256_2_128_Twiddle, sizeof(h_FFT256_2_128_Twiddle), 0, cudaMemcpyHostToDevice);
@@ -561,7 +563,7 @@ static void x11_simd512_cpu_init_sm2(int thr_id)
 }
 
 __host__
-static void x11_simd512_cpu_hash_64_sm2(int *thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+static void x11_simd512_cpu_hash_64_sm2(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int *order)
 {
 	const int threadsperblock = 256;
 
@@ -570,6 +572,6 @@ static void x11_simd512_cpu_hash_64_sm2(int *thr_id, uint32_t threads, uint32_t 
 
 	size_t shared_size = 0;
 
-	x11_simd512_gpu_hash_64_sm2 << <grid, block, shared_size >> >(thr_id, threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-	MyStreamSynchronize(NULL, order, ((uintptr_t)thr_id) & 15);
+	x11_simd512_gpu_hash_64_sm2<<<grid, block, shared_size, streamk[thr_id]>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, order);
+//	MyStreamSynchronize(NULL, order, thr_id);
 }

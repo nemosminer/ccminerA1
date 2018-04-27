@@ -41,9 +41,12 @@ extern "C" {
 #include <miner.h>
 }
 
+//#include "cuda_helper_alexis.h"
+//#include "cuda_vectors_alexis.h"
 #include <cuda_helper.h>
 #include <cuda_vector_uint2x4.h>
 #include <cuda_vectors.h>
+extern cudaStream_t streamk[MAX_GPUS];
 
 #define xor3x(a,b,c) (a^b^c)
 
@@ -179,8 +182,10 @@ void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 	switch (mode) {
 	case 0: /* x15 with rotated T1-T7 (based on T0) */
 		table0 = (uint64_t*)plain_T0;
-		cudaMemcpyToSymbol(InitVector_RC, plain_RC, 10*sizeof(uint64_t),0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(precomputed_round_key_64, plain_precomputed_round_key_64, 72*sizeof(uint64_t),0, cudaMemcpyHostToDevice);
+//		cudaMemcpy(InitVector_RC, plain_RC, 10*sizeof(uint64_t), cudaMemcpyHostToDevice);
+//		cudaMemcpy(precomputed_round_key_64, plain_precomputed_round_key_64, 72*sizeof(uint64_t), cudaMemcpyHostToDevice);
+		cudaMemcpyToSymbol(InitVector_RC, plain_RC, 10 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+		cudaMemcpyToSymbol(precomputed_round_key_64, plain_precomputed_round_key_64, 72 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 		break;
 	case 1: /* old whirlpool */
 		table0 = (uint64_t*)old1_T0;
@@ -619,10 +624,9 @@ void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 
 __global__
 __launch_bounds__(TPB64,2)
-void x15_whirlpool_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
+void x15_whirlpool_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*order) { __syncthreads(); return; }
 	__shared__ uint2 sharedMemory[7][256];
 
 	if (threadIdx.x < 256) {
@@ -648,7 +652,7 @@ void x15_whirlpool_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 		*(uint2x4*)&hash[ 0] = __ldg4((uint2x4*)&g_hash[(thread<<3) + 0]);
 		*(uint2x4*)&hash[ 4] = __ldg4((uint2x4*)&g_hash[(thread<<3) + 4]);
 
-//		__syncthreads();
+		__syncthreads();
 
 		#pragma unroll 8
 		for(int i=0;i<8;i++)
@@ -727,22 +731,24 @@ void x15_whirlpool_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
 		*(uint2x4*)&g_hash[(thread<<3)+ 4] = *(uint2x4*)&hash[ 4];
 	}
 }
-/*
+#if 0
 __host__
-static void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash)
+static void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
 {
 	dim3 grid((threads + TPB64-1) / TPB64);
 	dim3 block(TPB64);
 
-	x15_whirlpool_gpu_hash_64 <<<grid, block>>> (threads, (uint64_t*)d_hash);
+	x15_whirlpool_gpu_hash_64 <<<grid, bloc>>> (threads, (uint64_t*)d_hash, order);
 }
-*/
+#endif
 __host__
-void x15_whirlpool_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
+void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
 {
 	dim3 grid((threads + TPB64 - 1) / TPB64);
 	dim3 block(TPB64);
 
-	x15_whirlpool_gpu_hash_64 << <grid, block >> > (thr_id, threads, (uint64_t*)d_hash);
+	x15_whirlpool_gpu_hash_64 << <grid, block>> > (threads, (uint64_t*)d_hash, order);
+//	x15_whirlpool_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> > (threads, (uint64_t*)d_hash, order);
 	//	x15_whirlpool_cpu_hash_64(thr_id, threads, d_hash);
 }
+

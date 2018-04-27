@@ -191,20 +191,22 @@ __device__ uint32_t d_AES3[256] = {
 static __constant__ __align__(64) uint32_t d_AES0[256];
 static __constant__ __align__(64) uint32_t d_AES3[256];
 */
+extern cudaStream_t streamk[MAX_GPUS];
 
 static void aes_cpu_init(int thr_id)
 {
-	CUDA_CALL_OR_RET(cudaMemcpyToSymbol(d_AES0,
+	CUDA_CALL_OR_RET(cudaMemcpyToSymbolAsync(d_AES0,
 		h_AES0,
 		sizeof(h_AES0),
-		0, cudaMemcpyHostToDevice));
+		0, cudaMemcpyHostToDevice, 0));
 
-	CUDA_CALL_OR_RET(cudaMemcpyToSymbol(d_AES3,
+	CUDA_CALL_OR_RET(cudaMemcpyToSymbolAsync(d_AES3,
 		h_AES3,
 		sizeof(h_AES3),
-		0, cudaMemcpyHostToDevice));
+		0, cudaMemcpyHostToDevice, 0));
 }
 #else
+00
 static void aes_cpu_init(int thr_id) {}
 #endif
 

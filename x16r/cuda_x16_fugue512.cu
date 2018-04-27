@@ -297,9 +297,11 @@ uint32_t ROL16(const uint32_t a) {
 __constant__ static uint64_t c_PaddedMessage80[10];
 
 __host__
-void x16_fugue512_setBlock_80(void *pdata)
+void x16_fugue512_setBlock_80(int thr_id, void *pdata)
 {
-	cudaMemcpyToSymbol(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 /***************************************************/
@@ -328,7 +330,7 @@ void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce,
 	}
 #endif
 
-	__syncthreads();
+//	__syncthreads();
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -465,5 +467,6 @@ void x16_fugue512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x16_fugue512_gpu_hash_80 <<<grid, block>>> (threads, startNonce, (uint64_t*)d_hash);
+	x16_fugue512_gpu_hash_80 << <grid, block>> > (threads, startNonce, (uint64_t*)d_hash);
+//	x16_fugue512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNonce, (uint64_t*)d_hash);
 }

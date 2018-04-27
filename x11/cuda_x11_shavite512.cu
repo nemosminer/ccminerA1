@@ -545,7 +545,7 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t
 	#else
 	#error "Not set up for this"
 	#endif
-//	__threadfence_block();
+	//	__threadfence_block();
 
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -604,7 +604,8 @@ void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x11_shavite512_gpu_hash_80<<<grid, block>>>(threads, startNounce, (uint64_t*)d_outputHash);
+	x11_shavite512_gpu_hash_80 << <grid, block>> >(threads, startNounce, (uint64_t*)d_outputHash);
+//	x11_shavite512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> >(threads, startNounce, (uint64_t*)d_outputHash);
 }
 
 __host__
@@ -614,7 +615,7 @@ void x11_shavite512_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-void x11_shavite512_setBlock_80(void *pdata)
+void x11_shavite512_setBlock_80(int thr_id, void *pdata)
 {
 	// Message with Padding
 	// The nonce is at Byte 76.
@@ -625,5 +626,7 @@ void x11_shavite512_setBlock_80(void *pdata)
 
 	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 32*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 */
-	cudaMemcpyToSymbol(c_PaddedMessage80, pdata, 20 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_PaddedMessage80, pdata, 20 * sizeof(uint32_t), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_PaddedMessage80, pdata, 20 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_PaddedMessage80, pdata, 20 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }

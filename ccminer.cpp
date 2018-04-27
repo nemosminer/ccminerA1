@@ -1,7 +1,8 @@
 ﻿/*
  * Copyright 2010 Jeff Garzik
  * Copyright 2012-2014 pooler
- * Copyright 2014-2017 tpruvot
+ * Copyright 2014-2018 tpruvot
+ * Copyright 2016      Alexis78
  * Copyright 2018      brianmct
  * Copyright 2018      a1i3nj03
  *
@@ -58,7 +59,7 @@
 BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
-#define PROGRAM_NAME		"a1_min3r"
+#define PROGRAM_NAME		"a1min3r"
 #define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
@@ -108,7 +109,7 @@ bool use_colors = true;
 int use_pok = 0;
 static bool opt_background = false;
 bool opt_quiet = false;
-int opt_maxlograte = 5;//3;
+int opt_maxlograte = 30;//3
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_time_limit = -1;
@@ -163,6 +164,12 @@ int device_interactive[MAX_GPUS] = { 0 };
 int opt_nfactor = 0;
 bool opt_autotune = true;
 char *jane_params = NULL;
+volatile int init_items[MAX_GPUS] = { 0 };
+//extern __device__ int *d_ark[MAX_GPUS];
+//extern __device__ __constant__ int d_ark[MAX_GPUS];
+
+extern volatile int *volatile h_ark[MAX_GPUS];
+
 
 // pools (failover/getwork infos)
 struct pool_infos pools[MAX_POOLS] = { 0 };
@@ -186,6 +193,7 @@ char *short_url = NULL;
 struct stratum_ctx stratum = { 0 };
 pthread_mutex_t stratum_sock_lock;
 pthread_mutex_t stratum_work_lock;
+extern "C" pthread_mutex_t ark_lock = 0;
 
 char *opt_cert;
 char *opt_proxy;
@@ -729,7 +737,7 @@ static bool work_decode(const json_t *val, struct work *work)
 	default:
 #endif
 		data_size = 128;
-		adata_sz = data_size / 4;
+		adata_sz = data_size >> 2;
 //	}
 
 	if (!jobj_binary(val, "data", work->data, data_size)) {
@@ -759,7 +767,6 @@ static bool work_decode(const json_t *val, struct work *work)
 	} else work->maxvote = 0;
 #endif
 		work->maxvote = 0;
-
 	for (i = 0; i < adata_sz; i++)
 		work->data[i] = le32dec(work->data + i);
 	for (i = 0; i < atarget_sz; i++)
@@ -805,7 +812,7 @@ static bool work_decode(const json_t *val, struct work *work)
 	}
 #endif
 	/* use work ntime as job id (solo-mining) */
-	cbin2hex(work->job_id, (const char*)&work->data[17], 4);
+//	cbin2hex(work->job_id, (const char*)&work->data[17], 4);
 #if 0
 	if (opt_algo == ALGO_DECRED) {
 		uint16_t vote;
@@ -915,8 +922,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		struct work submit_work;
 		memcpy(&submit_work, work, sizeof(struct work));
 		if (!hashlog_already_submittted(submit_work.job_id, submit_work.nonces[idnonce])) {
-			if (rpc2_stratum_submit(pool, &submit_work))
-				hashlog_remember_submit(&submit_work, submit_work.nonces[idnonce]);
+//			if (rpc2_stratum_submit(pool, &submit_work))
+//				hashlog_remember_submit(&submit_work, submit_work.nonces[idnonce]);
 			stratum.job.shares_count++;
 		}
 		return true;
@@ -1038,7 +1045,6 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			free(noncestr);
 			// prevent useless computing on some pools
 			g_work_time = 0;
-			applog(LOG_NOTICE, "PUC");
 			restart_threads();
 			return true;
 		}
@@ -1571,11 +1577,11 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	uchar merkle_root[64] = { 0 };
 	int i;
 
-	if (sctx->rpc2)
-		return rpc2_stratum_gen_work(sctx, work);
+//	if (sctx->rpc2)
+//		return rpc2_stratum_gen_work(sctx, work);
 
 	if (!sctx->job.job_id) {
-		// applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
+		applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
 		return false;
 	}
 
@@ -1757,7 +1763,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 //		case ALGO_TIMETRAVEL:
 //		case ALGO_BITCORE:
 		case ALGO_X16R:
-			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));//(256.0 * opt_difficulty));
+			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 #if 0
 		case ALGO_KECCAK:
@@ -1784,13 +1790,43 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	return true;
 }
 
-__host__ extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
+__host__ extern void ark_switch(int thr_id);
 
 void restart_threads(void)
 {
 	if (opt_debug && !opt_quiet)
 		applog(LOG_DEBUG, "%s", __FUNCTION__);
 	// restart mining thread IRL
+#if 1
+	pthread_mutex_lock(&ark_lock);
+	if (stratum.job.clean) 
+	{
+		for (int i = 0; i < opt_n_threads && work_restart; i++) if (!work_restart[i].restart)
+		{
+			work_restart[i].restart = 1;
+			ark_switch(i);
+		}
+		pthread_mutex_unlock(&ark_lock);
+	}
+	else
+	{
+		pthread_mutex_unlock(&ark_lock);
+		for (int i = 0; i < opt_n_threads && work_restart; i++)
+			if (!work_restart[i].restart)
+				work_restart[i].restart = 1;
+	}
+#elif 1
+	pthread_mutex_lock(&ark_lock);
+	for (int i = 0; i < opt_n_threads && work_restart; i++)
+	{
+		if (!work_restart[i].restart)
+		{
+			work_restart[i].restart = 1;
+			ark_switch(i);
+		}
+	}
+	pthread_mutex_unlock(&ark_lock);
+#elif 1
 	/*
 	if (stratum.job.clean && strange)
 	{
@@ -1801,15 +1837,22 @@ void restart_threads(void)
 			x11_echo512_cpu_init(0, 1 << 21);
 		}
 	}
-	else */
-	for (int i = 0; i < opt_n_threads && work_restart; i++)
-	{
-		if (!work_restart[i].restart)
+	else 
+	if (opt_benchmark) for (int i = 0; i < opt_n_threads && work_restart; i++)
 		{
-			work_restart[i].restart = 1;
-			x11_echo512_cpu_init(i, 1 << 21);
+			if (!work_restart[i].restart)
+			{
+				work_restart[i].restart = 1;
+//				x11_echo512_cpu_init(i, 1 << 21);
+			}
 		}
+		else */
+	for (int i = 0; i < opt_n_threads && work_restart; i++) if (!work_restart[i].restart)
+	{
+		work_restart[i].restart = 1;
+		ark_switch(i);
 	}
+#endif
 }
 
 static bool wanna_mine(int thr_id)
@@ -1882,6 +1925,7 @@ void sig_fn(int sig)
 	return;
 }
 */
+
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -1891,7 +1935,7 @@ static void *miner_thread(void *userdata)
 	struct cgpu_info * cgpu = &thr_info[thr_id].gpu;
 	struct work work;
 	uint64_t loopcnt = 0;
-	uint32_t max_nonce;
+	uint32_t max_nonce = 0;
 	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) - (thr_id + 1);
 	time_t tm_rate_log = 0;
 	bool work_done = false;
@@ -1975,6 +2019,7 @@ static void *miner_thread(void *userdata)
 
 		if (have_stratum) {
 
+			/*
 			uint32_t sleeptime = 0;
 			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) {
 //				usleep(100*1000);
@@ -1985,8 +2030,9 @@ static void *miner_thread(void *userdata)
 				}
 				sleeptime++;
 			}
-			if (sleeptime && opt_debug && !opt_quiet)
+//			if (sleeptime && opt_debug && !opt_quiet)
 				applog(LOG_DEBUG, "sleeptime: %u ms", sleeptime*100);
+				*/
 			//nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 			pthread_mutex_lock(&g_work_lock);
 			extrajob |= work_done;
@@ -2067,10 +2113,10 @@ static void *miner_thread(void *userdata)
 		} else
 			nonceptr[0]++; //??
 
-		if (opt_benchmark) {
+//		if (opt_benchmark) {
 			// randomize work
-			nonceptr[-1] += 1;
-		}
+//			nonceptr[-1] += 1;
+//		}
 
 		pthread_mutex_unlock(&g_work_lock);
 
@@ -2093,10 +2139,17 @@ static void *miner_thread(void *userdata)
 
 		// prevent gpu scans before a job is received
 		nodata_check_oft = 0;
+		if (ALGO_X16R && max_nonce == 0 && init_items[thr_id] == 0)
+		{
+			if (x16r_init(thr_id, -1) != -128)
+				exit(-1);
+		}
 		if (have_stratum && work.data[nodata_check_oft] == 0 && !opt_benchmark) {
 			sleep(1);
 			if (!thr_id) pools[cur_pooln].wait_time += 1;
 			gpulog(LOG_DEBUG, thr_id, "no data");
+			
+//			gpulog(LOG_NOTICE, thr_id, "no data");
 			continue;
 		}
 
@@ -2527,12 +2580,13 @@ static void *miner_thread(void *userdata)
 		case ALGO_X16R:
 //			try{
 
-				rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done);
+			rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done);
 
-				if (rc == -127)
+//				if (rc == -127)
 				{
 //					work.data[19] = max_nonce;
-					continue;
+//					work_done = 1;
+//					continue;
 				}
 				/*
 			}
@@ -2561,8 +2615,8 @@ static void *miner_thread(void *userdata)
 		if (abort_flag)
 			break; // time to leave the mining loop...
 
-		if (work_restart[thr_id].restart)
-			continue;
+//		if (work_restart[thr_id].restart)
+//			continue;
 
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
@@ -2578,7 +2632,6 @@ static void *miner_thread(void *userdata)
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", work.nonces[0], swab32(work.nonces[0]));
 		if (rc > 1 && opt_debug)
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", work.nonces[1], swab32(work.nonces[1]));
-
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
 		if (cgpu && diff.tv_sec) { // stop monitoring
@@ -2604,9 +2657,15 @@ static void *miner_thread(void *userdata)
 
 		if (rc > 0)
 			work.scanned_to = work.nonces[0];
-		if (rc > 1)
+		else if (rc > 1)
 			work.scanned_to = max(work.nonces[0], work.nonces[1]);
-		if (rc == -128)
+		else if (rc == -127)
+		{
+//			work.data[19] = max_nonce;
+			work_done = 1;
+			continue;
+		}
+		else if (rc == -128)
 		{
 			work.data[19] = max_nonce;
 			usleep(100);
@@ -2641,12 +2700,12 @@ static void *miner_thread(void *userdata)
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 				hashrate += stats_get_speed(i, thr_hashrates[i]);
 			pthread_mutex_unlock(&stats_lock);
-			/*
-			if (opt_benchmark && bench_algo == -1 && loopcnt > 2) {
+
+			if (opt_benchmark /*&& bench_algo == ALGO_X16R*/ && loopcnt > 2) {
 				format_hashrate(hashrate, s);
 				applog(LOG_NOTICE, "Total: %s", s);
 			}
-			*/
+
 			// since pool start
 			pools[cur_pooln].work_time = (uint32_t) (time(NULL) - firstwork_time);
 
@@ -2661,6 +2720,7 @@ static void *miner_thread(void *userdata)
 
 		/* if nonce found, submit work */
 		if (rc > 0 && !opt_benchmark) {
+//			work_done = 1;
 			uint32_t curnonce = nonceptr[0]; // current scan position
 
 			if (opt_led_mode == LED_MODE_SHARES)
@@ -2815,7 +2875,9 @@ longpoll_retry:
 			pthread_mutex_lock(&g_work_lock);
 			if (work_decode(json_object_get(val, "result"), &g_work)) {
 				applog(LOG_NOTICE, "VAL");
+				stratum.job.clean = 1;
 				restart_threads();
+//				stratum.job.clean = 0;
 					if (!opt_quiet) {
 					char netinfo[64] = { 0 };
 					if (net_diff > 0.) {
@@ -2968,7 +3030,6 @@ wait_stratum_url:
 			g_work_time = 0;
 			g_work.data[0] = 0;
 			pthread_mutex_unlock(&g_work_lock);
-			applog(LOG_NOTICE, "RUG");
 			restart_threads();
 
 			if (!stratum_connect(&stratum, pool->url) ||
@@ -2996,9 +3057,9 @@ wait_stratum_url:
 			}
 		}
 
-		if (stratum.rpc2) {
-			rpc2_stratum_thread_stuff(pool);
-		}
+//		if (stratum.rpc2) {
+//			rpc2_stratum_thread_stuff(pool);
+//		}
 
 		if (switchn != pool_switch_count) goto pool_switched;
 
@@ -3018,6 +3079,7 @@ wait_stratum_url:
 						applog(LOG_BLUE, "%s %s block %d", pool->short_url, algo_names[opt_algo],
 						stratum.job.height);
 				}
+				/*
 				else
 				{
 					strange = 1;
@@ -3026,6 +3088,8 @@ wait_stratum_url:
 				applog(LOG_NOTICE, "JOB");
 				restart_threads();
 				strange = 0;
+				*/
+				restart_threads();
 				if (check_dups || opt_showdiff)
 					hashlog_purge_old();
 				stats_purge_old();
@@ -3229,9 +3293,9 @@ void parse_arg(int key, char *arg)
 		}
 		break;
 	}
-	case 'k':
-		opt_scratchpad_url = strdup(arg);
-		break;
+//	case 'k':
+//		opt_scratchpad_url = strdup(arg);
+//		break;
 	case 'i':
 		d = atof(arg);
 		v = (uint32_t) d;
@@ -4004,6 +4068,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&stratum_work_lock, NULL);
 	pthread_mutex_init(&stats_lock, NULL);
 	pthread_mutex_init(&g_work_lock, NULL);
+	pthread_mutex_init(&ark_lock, NULL);
 
 	// number of cpus for thread affinity
 #if defined(WIN32)

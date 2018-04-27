@@ -277,10 +277,21 @@ static void E8(uint32_t x[8][4])
 
 __global__
 //__launch_bounds__(256,2)
-void quark_jh512_gpu_hash_64(int *thr_id, const uint32_t threads, uint32_t* g_hash)
+void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*order) { __syncthreads(); return; }
+
+	uint32_t x[8][4] = { /* init */
+		{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
+		{ 0x8d5e228a, 0x0bef970c, 0x591234e9, 0x61c3b3f2 },
+		{ 0xc1a01d89, 0x1e806f53, 0x6b05a92a, 0x806d2bea },
+		{ 0xdbcc8e58, 0xa6ba7520, 0x763a0fa9, 0xf73bf8ba },
+		{ 0x05e66901, 0x694ae341, 0x8e8ab546, 0x5ae66f2e },
+		{ 0xd0a74710, 0x243c84c1, 0xb1716e3b, 0x99c15a2d },
+		{ 0xecf657cf, 0x56f8b19d, 0x7c8806a7, 0x56b11657 },
+		{ 0xdffcc2e3, 0xfb1785e6, 0x78465a54, 0x4bdd8ccc }
+	};
+
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -293,7 +304,7 @@ void quark_jh512_gpu_hash_64(int *thr_id, const uint32_t threads, uint32_t* g_ha
 		AS_UINT4(&h[ 4]) = AS_UINT4(&Hash[ 4]);
 		AS_UINT4(&h[ 8]) = AS_UINT4(&Hash[ 8]);
 		AS_UINT4(&h[12]) = AS_UINT4(&Hash[12]);
-
+#if 0
 		uint32_t x[8][4] = { /* init */
 			{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
 			{ 0x8d5e228a, 0x0bef970c, 0x591234e9, 0x61c3b3f2 },
@@ -304,16 +315,16 @@ void quark_jh512_gpu_hash_64(int *thr_id, const uint32_t threads, uint32_t* g_ha
 			{ 0xecf657cf, 0x56f8b19d, 0x7c8806a7, 0x56b11657 },
 			{ 0xdffcc2e3, 0xfb1785e6, 0x78465a54, 0x4bdd8ccc }
 		};
-
+#endif
 		#pragma unroll
 		for (int i = 0; i < 16; i++)
-			x[i/4][i & 3] ^= h[i];
+			x[i >> 2][i & 3] ^= h[i];
 
 		E8(x);
 
 		#pragma unroll
 		for (int i = 0; i < 16; i++)
-			x[(i+16)/4][(i+16) & 3] ^= h[i];
+			x[(i+16) >> 2][(i+16) & 3] ^= h[i];
 
 		x[0][0] ^= 0x80U;
 		x[3][3] ^= 0x00020000U;
@@ -331,13 +342,19 @@ void quark_jh512_gpu_hash_64(int *thr_id, const uint32_t threads, uint32_t* g_ha
 }
 
 __host__
-void quark_jh512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
+void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	quark_jh512_gpu_hash_64 << <grid, block >> >(thr_id, threads, d_hash);
+	quark_jh512_gpu_hash_64 << <grid, block>> >(threads, d_hash, order);
+#if 0
+	if (thr_id < MAX_GPUS)
+		quark_jh512_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> >(threads, d_hash, order);
+	else
+		quark_jh512_gpu_hash_64 << <grid, block, 0, streamk[thr_id + MAX_GPUS] >> >(threads, d_hash, order);
+#endif
 }
 
 // Setup function
@@ -352,7 +369,9 @@ static uint32_t c_PaddedMessage80[20]; // padded message (80 bytes)
 __host__
 void jh512_setBlock_80(int thr_id, uint32_t *endiandata)
 {
-	cudaMemcpyToSymbol(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 __global__
@@ -421,7 +440,7 @@ void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	jh512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_hash);
+	jh512_gpu_hash_80 <<<grid, block, 0, streamk[thr_id]>>> (threads, startNounce, d_hash);
 }
 
 #endif
@@ -485,7 +504,8 @@ void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	jh512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_hash);
+	jh512_gpu_hash_80 << <grid, block>> > (threads, startNounce, d_hash);
+//	jh512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, d_hash);
 }
 
 extern "C" {
@@ -504,8 +524,12 @@ void jh512_setBlock_80(int thr_id, uint32_t *endiandata)
 	sph_jh512_init(&ctx_jh);
 	sph_jh512(&ctx_jh, endiandata, 64);
 
-	cudaMemcpyToSymbol(c_JHState, ctx_jh.H.narrow, 128, 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(c_Message, &endiandata[16], sizeof(c_Message), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_JHState, ctx_jh.H.narrow, 128, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_Message, &endiandata[16], sizeof(c_Message), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_JHState, ctx_jh.H.narrow, 128, 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(c_Message, &endiandata[16], sizeof(c_Message), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_JHState, ctx_jh.H.narrow, 128, 0, cudaMemcpyHostToDevice, streamk[thr_id]);
+//	cudaMemcpyToSymbolAsync(c_Message, &endiandata[16], sizeof(c_Message), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 #endif

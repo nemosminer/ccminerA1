@@ -7,7 +7,9 @@
 #include "miner.h"
 
 #include "cuda_helper.h"
+extern cudaStream_t streamk[MAX_GPUS];
 
+//__constant__ uint32_t *pTarget = NULL; // 32 bytes
 //__constant__ uint32_t pTarget[8]; // 32 bytes
 __constant__ uint32_t pTarget[64]; // 32 bytes
 
@@ -19,7 +21,7 @@ static __thread bool init_done = false;
 __host__
 void cuda_check_cpu_init(int thr_id, uint32_t threads)
 {
-    CUDA_CALL_OR_RET(cudaMalloc(&d_resNonces[thr_id], 32));
+	CUDA_CALL_OR_RET(cudaMalloc(&d_resNonces[thr_id], 32));
     CUDA_SAFE_CALL(cudaMallocHost(&h_resNonces[thr_id], 32));
     init_done = true;
 }
@@ -37,9 +39,10 @@ void cuda_check_cpu_free(int thr_id)
 
 // Target Difficulty
 __host__
-void cuda_check_cpu_setTarget(const void *ptarget)
+void cuda_check_cpu_setTarget(const void *ptarget, int thr_id)
 {
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 32, 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(pTarget, ptarget, 32, 0, cudaMemcpyHostToDevice, 0));
+//	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 32, 0, cudaMemcpyHostToDevice));
 //	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 256, 0, cudaMemcpyHostToDevice));
 }
 __host__
@@ -161,10 +164,9 @@ static bool hashbelowtarget(const uint32_t *const __restrict__ hash, const uint3
 }
 
 __global__ __launch_bounds__(512, 4)
-void cuda_checkhash_64(int *thr_id, uint32_t threads, uint32_t startNounce, uint32_t *hash, uint32_t *resNonces)
+void cuda_checkhash_64(uint32_t threads, uint32_t startNounce, uint32_t *hash, uint32_t *resNonces, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*order) { __syncthreads(); return; }
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -194,11 +196,26 @@ void cuda_checkhash_32(uint32_t threads, uint32_t startNounce, uint32_t *hash, u
 	}
 }
 
+extern "C" pthread_mutex_t ark_lock;
+extern 	volatile int *volatile h_ark[MAX_GPUS];
+
+
 __host__
-uint32_t cuda_check_hash(int *thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash)
+uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, int *order)
 {
-	uint32_t my_id = ((uintptr_t)thr_id) & 15;
-	cudaMemset(d_resNonces[my_id], 0xff, sizeof(uint32_t));
+	/*
+	CUDA_SAFE_CALL(cudaStreamSynchronize(streamk[thr_id]));
+	pthread_mutex_lock(&ark_lock);
+	if (work_restart[thr_id].restart)
+	{
+		pthread_mutex_unlock(&ark_lock);
+		return UINT32_MAX;
+	}
+	pthread_mutex_unlock(&ark_lock);
+	*/
+//	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
+	cudaMemsetAsync(d_resNonces[thr_id], 0xff, sizeof(uint32_t), 0);
+//	cudaMemsetAsync(d_resNonces[thr_id], 0xff, sizeof(uint32_t), streamk[thr_id]);
 
 	const uint32_t threadsperblock = 512;
 
@@ -213,11 +230,26 @@ uint32_t cuda_check_hash(int *thr_id, uint32_t threads, uint32_t startNounce, ui
 		return UINT32_MAX;
 	}
 
-	cuda_checkhash_64 <<<grid, block>>> (thr_id, threads, startNounce, d_inputHash, d_resNonces[my_id]);
-	cudaThreadSynchronize();
+//	cuda_checkhash_64 << <grid, block>> > (threads, startNounce, d_inputHash, d_resNonces[thr_id], order);
+	cuda_checkhash_64 << <grid, block>> > (threads, startNounce, d_inputHash, d_resNonces[thr_id], order);
+//	cuda_checkhash_64 << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, d_inputHash, d_resNonces[thr_id], order);
 
-	cudaMemcpy(h_resNonces[my_id], d_resNonces[my_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	return h_resNonces[my_id][0];
+//	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	cudaMemcpyAsync(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost, 0);
+//	cudaMemcpyAsync(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost, streamk[thr_id]);
+
+//	pthread_mutex_lock(&ark_lock);
+	if (*h_ark[thr_id])
+	{
+//		pthread_mutex_unlock(&ark_lock);
+		return UINT32_MAX;
+	}
+//	pthread_mutex_unlock(&ark_lock);
+	cudaDeviceSynchronize();
+//	CUDA_SAFE_CALL(cudaStreamSynchronize(0));
+//	CUDA_SAFE_CALL(cudaStreamSynchronize(streamk[thr_id]));
+
+	return h_resNonces[thr_id][0];
 }
 
 __host__
@@ -248,10 +280,9 @@ uint32_t cuda_check_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, 
 /* --------------------------------------------------------------------------------------------- */
 
 __global__ __launch_bounds__(512, 4)
-void cuda_checkhash_64_suppl(int* thr_id, uint32_t startNounce, uint32_t *hash, uint32_t *resNonces)
+void cuda_checkhash_64_suppl(uint32_t startNounce, uint32_t *hash, uint32_t *resNonces, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*order) { __syncthreads(); return; }
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	uint32_t *inpHash = &hash[thread << 4];
@@ -265,10 +296,9 @@ void cuda_checkhash_64_suppl(int* thr_id, uint32_t startNounce, uint32_t *hash, 
 }
 
 __host__
-uint32_t cuda_check_hash_suppl(int *thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce)
+uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce, int *order)
 {
 	uint32_t rescnt, result = 0;
-	int my_id = ((uintptr_t)thr_id) & 15;
 
 	const uint32_t threadsperblock = 512;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
@@ -280,19 +310,54 @@ uint32_t cuda_check_hash_suppl(int *thr_id, uint32_t threads, uint32_t startNoun
 	}
 
 	// first element stores the count of found nonces
-	cudaMemset(d_resNonces[my_id], 0, sizeof(uint32_t));
+/*
+	CUDA_SAFE_CALL(cudaStreamSynchronize(streamk[thr_id]));
+	pthread_mutex_lock(&ark_lock);
+	if (work_restart[thr_id].restart)
+	{
+		pthread_mutex_unlock(&ark_lock);
+		return 0;
+	}
+	pthread_mutex_unlock(&ark_lock);
+*/
+//	cudaMemset(d_resNonces[thr_id], 0, sizeof(uint32_t));
+	cudaMemsetAsync(d_resNonces[thr_id], 0, sizeof(uint32_t), 0);
+//	cudaMemsetAsync(d_resNonces[thr_id], 0, sizeof(uint32_t), streamk[thr_id]);
 
-	cuda_checkhash_64_suppl << <grid, block >> > (thr_id, startNounce, d_inputHash, d_resNonces[my_id]);
-	cudaThreadSynchronize();
+	cuda_checkhash_64_suppl << <grid, block>> > (startNounce, d_inputHash, d_resNonces[thr_id], order);
+//	cuda_checkhash_64_suppl << <grid, block, 0, streamk[thr_id] >> > (startNounce, d_inputHash, d_resNonces[thr_id], order);
 
-	cudaMemcpy(h_resNonces[my_id], d_resNonces[my_id], 32, cudaMemcpyDeviceToHost);
-	rescnt = h_resNonces[my_id][0];
+//		cudaThreadSynchronize();
+	/*
+	pthread_mutex_lock(&ark_lock);
+	if (work_restart[thr_id].restart)
+	{
+		pthread_mutex_unlock(&ark_lock);
+		return 0;
+	}
+	pthread_mutex_unlock(&ark_lock);
+	*/
+//	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], 32, cudaMemcpyDeviceToHost);
+	cudaMemcpyAsync(h_resNonces[thr_id], d_resNonces[thr_id], 32, cudaMemcpyDeviceToHost, 0);
+//	cudaMemcpyAsync(h_resNonces[thr_id], d_resNonces[thr_id], 32, cudaMemcpyDeviceToHost, streamk[thr_id]);
+//	pthread_mutex_lock(&ark_lock);
+	if (*h_ark[thr_id])
+	{
+//		pthread_mutex_unlock(&ark_lock);
+		return UINT32_MAX;
+	}
+//	pthread_mutex_unlock(&ark_lock);
+//	CUDA_SAFE_CALL(cudaStreamSynchronize(0));
+//	CUDA_SAFE_CALL(cudaStreamSynchronize(streamk[thr_id]));
+	cudaDeviceSynchronize();
+
+	rescnt = h_resNonces[thr_id][0];
 	if (rescnt > numNonce) {
 		if (numNonce <= rescnt) {
-			result = h_resNonces[my_id][numNonce + 1];
+			result = h_resNonces[thr_id][numNonce+1];
 		}
 		if (opt_debug)
-			applog(LOG_WARNING, "Found %d nonces: %x + %x", rescnt, h_resNonces[my_id][1], result);
+			applog(LOG_WARNING, "Found %d nonces: %x + %x", rescnt, h_resNonces[thr_id][1], result);
 	}
 
 	return result;

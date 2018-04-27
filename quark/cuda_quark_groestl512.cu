@@ -36,10 +36,10 @@ __constant__ static uint32_t c_Message80[20];
 
 __global__ __launch_bounds__(TPB, THF)
 //const uint32_t startNounce, 
-void quark_groestl512_gpu_hash_64_quad_a1_min3r(int *thr_id, const uint32_t threads, uint4* g_hash)
+void quark_groestl512_gpu_hash_64_quad_a1_min3r(const uint32_t threads, uint4* g_hash, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*order) { __syncthreads(); return; }
+
 #if __CUDA_ARCH__ >= 300
 	// BEWARE : 4-WAY CODE (one hash need 4 threads)
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x); // >> 2; // done on cpu
@@ -187,7 +187,7 @@ void quark_groestl512_gpu_hash_64_quad_a1_min3r(int *thr_id, const uint32_t thre
 }
 
 __global__ __launch_bounds__(TPB, THF)
-void quark_groestl512_gpu_hash_64_quad(int *thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t * g_hash, uint32_t * __restrict g_nonceVector)
+void quark_groestl512_gpu_hash_64_quad(const uint32_t threads, const uint32_t startNounce, uint32_t * g_hash, uint32_t * __restrict g_nonceVector)
 {
 	//! fixme please
 #if 0 // __CUDA_ARCH__ >= 300
@@ -263,7 +263,7 @@ void quark_groestl512_cpu_free(int thr_id)
 }
 
 __host__
-void quark_groestl512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
+void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
 {
 	uint32_t threadsperblock = TPB;
 	// Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
@@ -278,7 +278,11 @@ void quark_groestl512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_has
 
 //	if (device_sm[dev_id] >= 300 && cuda_arch[dev_id] >= 300)// && order == -1) //! for x16r, TBD if it will work on other algos.
 //	{
-	quark_groestl512_gpu_hash_64_quad_a1_min3r << <grid, block >> >(thr_id, threads << 2, (uint4*)d_hash);
+	quark_groestl512_gpu_hash_64_quad_a1_min3r << <grid, block>> >(threads << 2, (uint4*)d_hash, order);
+//	if (thr_id < MAX_GPUS)
+//		quark_groestl512_gpu_hash_64_quad_a1_min3r << <grid, block, 0, streamk[thr_id] >> >(threads << 2, (uint4*)d_hash, order);
+//	else
+//		quark_groestl512_gpu_hash_64_quad_a1_min3r << <grid, block, 0, streamk[thr_id + MAX_GPUS] >> >(threads << 2, (uint4*)d_hash, order);
 //	}
 	/*
 	else 
@@ -296,7 +300,9 @@ void quark_groestl512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_has
 __host__
 void groestl512_setBlock_80(int thr_id, uint32_t *endiandata)
 {
-	cudaMemcpyToSymbol(c_Message80, endiandata, sizeof(c_Message80), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_Message80, endiandata, sizeof(c_Message80), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_Message80, endiandata, sizeof(c_Message80), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_Message80, endiandata, sizeof(c_Message80), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 __global__ __launch_bounds__(TPB, THF)
@@ -325,7 +331,7 @@ void groestl512_gpu_hash_80_quad_a1_min3r(const uint32_t threads, const uint32_t
 		message[0].w = c_Message80[thr + (3 * THF)];
 		message[1].x = c_Message80[thr + (4 * THF)];
 
-		__syncthreads();
+//		__syncthreads();
 
 
 //		message[1].y = 0;
@@ -440,7 +446,8 @@ void groestl512_cuda_hash_80(const int thr_id, const uint32_t threads, const uin
 		dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
 		dim3 block(threadsperblock);
 		//! setup only for x16r(s?)
-		groestl512_gpu_hash_80_quad_a1_min3r <<<grid, block>>> (threads << 2, startNounce, (uint4*)d_hash);
+		groestl512_gpu_hash_80_quad_a1_min3r << <grid, block>> > (threads << 2, startNounce, (uint4*)d_hash);
+//		groestl512_gpu_hash_80_quad_a1_min3r << <grid, block, 0, streamk[thr_id] >> > (threads << 2, startNounce, (uint4*)d_hash);
 //		groestl512_gpu_hash_80_quad<< <grid, block >> > (threads, startNounce, d_hash);
 		/*
 

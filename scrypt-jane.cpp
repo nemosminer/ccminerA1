@@ -1,3 +1,4 @@
+#if 0
 /*
  * scrypt-jane by Andrew M, https://github.com/floodyberry/scrypt-jane
  *
@@ -711,3 +712,4 @@ void scryptjane_hash(void* output, const void* input)
 	scrypt_free(&V);
 	scrypt_free(&YX);
 }
+#endif

@@ -23,12 +23,17 @@ static __constant__ const uint32_t c_c[] = {
 		0x73746565, 0x6c706172, 0x6b204172, 0x656e6265, 0x72672031, 0x302c2062, 0x75732032, 0x3434362c,
 		0x20422d33, 0x30303120, 0x4c657576, 0x656e2d48, 0x65766572, 0x6c65652c, 0x2042656c, 0x6769756d
 };
-
+//0:4,1:0,2:1,3:0,4:2,5:0,6:1,7:0,8:3,9:0,a:1,b:0,c:2,d:0,e:1,f:0
 static __constant__ const uint32_t d_T512[1024] = {
+	//0:4		1:16		2:17		3:16		4:1			5:0			6:0			7:1			8:4			9:16		a:18		b:16		c:0			d:0			e:2			f:3
 	0xef0b0270, 0x3afd0000, 0x5dae0000, 0x69490000, 0x9b0f3c06, 0x4405b5f9, 0x66140a51, 0x924f5d0a, 0xc96b0030, 0xe7250000, 0x2f840000, 0x264f0000, 0x08695bf9, 0x6dfcf137, 0x509f6984, 0x9e69af68,
+	//0:4		1:16		2:18		3:16		4:0			5:0			6:2			7:3			8:6			9:19		a:17		b:17		c:0			d:1			e:0			f:1
 	0xc96b0030, 0xe7250000, 0x2f840000, 0x264f0000, 0x08695bf9, 0x6dfcf137, 0x509f6984, 0x9e69af68, 0x26600240, 0xddd80000, 0x722a0000, 0x4f060000, 0x936667ff, 0x29f944ce, 0x368b63d5, 0x0c26f262,
+	//0:10		1:16		2:16		3:16		4:2			5:3			6:5			7:0			8:10		9:16		a:16		b:16		c:0			d:0			e:0			f:0
 	0x145a3c00, 0xb9e90000, 0x61270000, 0xf1610000, 0xce613d6c, 0xb0493d78, 0x47a96720, 0xe18e24c5, 0x23671400, 0xc8b90000, 0xf4c70000, 0xfb750000, 0x73cd2465, 0xf8a6a549, 0x02c40a3f, 0xdc24e61f,
+	//0:10		1:16		2:16		3:16		4:0			5:0			6:0			7:0			8:11		9:20		a:21		b:18		c:0			d:0			e:0			f:1
 	0x23671400, 0xc8b90000, 0xf4c70000, 0xfb750000, 0x73cd2465, 0xf8a6a549, 0x02c40a3f, 0xdc24e61f, 0x373d2800, 0x71500000, 0x95e00000, 0x0a140000, 0xbdac1909, 0x48ef9831, 0x456d6d1f, 0x3daac2da,
+	//0:10		1:16		2:17		3:16		4:4			5:0			6:0			7:1			8:11		9:16		a:16		b:16		c:0			d:2			e:1			f:1
 	0x54285c00, 0xeaed0000, 0xc5d60000, 0xa1c50000, 0xb3a26770, 0x94a5c4e1, 0x6bb0419d, 0x551b3782, 0x9cbb1800, 0xb0d30000, 0x92510000, 0xed930000, 0x593a4345, 0xe114d5f4, 0x430633da, 0x78cace29,
 	0x9cbb1800, 0xb0d30000, 0x92510000, 0xed930000, 0x593a4345, 0xe114d5f4, 0x430633da, 0x78cace29, 0xc8934400, 0x5a3e0000, 0x57870000, 0x4c560000, 0xea982435, 0x75b11115, 0x28b67247, 0x2dd1f9ab,
 	0x29449c00, 0x64e70000, 0xf24b0000, 0xc2f30000, 0x0ede4e8f, 0x56c23745, 0xf3e04259, 0x8d0d9ec4, 0x466d0c00, 0x08620000, 0xdd5d0000, 0xbadd0000, 0x6a927942, 0x441f2b93, 0x218ace6f, 0xbf2c0be2,
@@ -175,10 +180,9 @@ static __constant__ const uint32_t d_T512[1024] = {
 	}
 
 __global__ __launch_bounds__(384,2)
-void x13_hamsi512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_hash)
+void x13_hamsi512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*order) { __syncthreads(); return; }
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -186,18 +190,74 @@ void x13_hamsi512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_
 		uint8_t h1[64];
 		*(uint2x4*)&h1[ 0] = *(uint2x4*)&Hash[0];
 		*(uint2x4*)&h1[32] = *(uint2x4*)&Hash[8];
-
+//		__syncthreads();
 		uint32_t c[16], h[16], m[16];
 		*(uint16*)&c[ 0] = *(uint16*)&c_c[ 0];
 		*(uint16*)&h[ 0] = *(uint16*)&c_c[ 0];
 
 		const uint32_t *tp;
 		uint32_t dm;
-
-		for(int i = 0; i < 64; i += 8) {
+/*
+		for (int i = 0; i < 64; i += 8) {
 			tp = &d_T512[0];
 
 			dm = -(h1[i] & 1);
+			m[0] = dm & tp[0]; m[1] = dm & tp[1];
+			m[2] = dm & tp[2]; m[3] = dm & tp[3];
+			m[4] = dm & tp[4]; m[5] = dm & tp[5];
+			m[6] = dm & tp[6]; m[7] = dm & tp[7];
+			m[8] = dm & tp[8]; m[9] = dm & tp[9];
+			m[10] = dm & tp[10]; m[11] = dm & tp[11];
+			m[12] = dm & tp[12]; m[13] = dm & tp[13];
+			m[14] = dm & tp[14]; m[15] = dm & tp[15];
+			tp += 16;
+#pragma unroll 7
+			for (int v = 1; v < 8; v++) {
+				dm = -((h1[i] >> v) & 1);
+				m[0] ^= dm & tp[0]; m[1] ^= dm & tp[1];
+				m[2] ^= dm & tp[2]; m[3] ^= dm & tp[3];
+				m[4] ^= dm & tp[4]; m[5] ^= dm & tp[5];
+				m[6] ^= dm & tp[6]; m[7] ^= dm & tp[7];
+				m[8] ^= dm & tp[8]; m[9] ^= dm & tp[9];
+				m[10] ^= dm & tp[10]; m[11] ^= dm & tp[11];
+				m[12] ^= dm & tp[12]; m[13] ^= dm & tp[13];
+				m[14] ^= dm & tp[14]; m[15] ^= dm & tp[15];
+				tp += 16;
+			}
+#pragma unroll
+			for (int u = 1; u < 8; u++) {
+#pragma unroll 8
+				for (int v = 0; v < 8; v++) {
+					dm = -((h1[i + u] >> v) & 1);
+					m[0] ^= dm & tp[0]; m[1] ^= dm & tp[1];
+					m[2] ^= dm & tp[2]; m[3] ^= dm & tp[3];
+					m[4] ^= dm & tp[4]; m[5] ^= dm & tp[5];
+					m[6] ^= dm & tp[6]; m[7] ^= dm & tp[7];
+					m[8] ^= dm & tp[8]; m[9] ^= dm & tp[9];
+					m[10] ^= dm & tp[10]; m[11] ^= dm & tp[11];
+					m[12] ^= dm & tp[12]; m[13] ^= dm & tp[13];
+					m[14] ^= dm & tp[14]; m[15] ^= dm & tp[15];
+					tp += 16;
+				}
+			}
+
+#pragma unroll 6
+			for (int r = 0; r < 6; r++) {
+				ROUND_BIG(r, d_alpha_n);
+			}
+			// order is (no more) important
+			h[0] ^= m[0]; h[1] ^= m[1]; h[2] ^= c[0]; h[3] ^= c[1];
+			h[4] ^= m[2]; h[5] ^= m[3]; h[6] ^= c[2]; h[7] ^= c[3];
+			h[8] ^= m[8]; h[9] ^= m[9]; h[10] ^= c[8]; h[11] ^= c[9];
+			h[12] ^= m[10]; h[13] ^= m[11]; h[14] ^= c[10]; h[15] ^= c[11];
+
+			*(uint16*)&c[0] = *(uint16*)&h[0];
+		}
+*/
+		for (int i = 0; i < 64; i += 8) {
+			tp = &d_T512[0];
+
+			dm = (-(h1[i] & 1))&~0;
 			m[ 0] = dm & tp[ 0]; m[ 1] = dm & tp[ 1];
 			m[ 2] = dm & tp[ 2]; m[ 3] = dm & tp[ 3];
 			m[ 4] = dm & tp[ 4]; m[ 5] = dm & tp[ 5];
@@ -209,7 +269,7 @@ void x13_hamsi512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_
 			tp += 16;
 			#pragma unroll 7
 			for (int v = 1; v < 8; v ++) {
-				dm = -((h1[i]>>v) & 1);
+				dm = (-((h1[i]>>v) & 1))&~0;
 				m[ 0] ^= dm & tp[ 0]; m[ 1] ^= dm & tp[ 1];
 				m[ 2] ^= dm & tp[ 2]; m[ 3] ^= dm & tp[ 3];
 				m[ 4] ^= dm & tp[ 4]; m[ 5] ^= dm & tp[ 5];
@@ -224,7 +284,7 @@ void x13_hamsi512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_
 			for (int u = 1; u < 8; u ++) {
 				#pragma unroll 8
 				for (int v = 0; v < 8; v ++) {
-					dm = -((h1[i+u]>>v) & 1);
+					dm = (-((h1[i+u]>>v) & 1))& ~0;
 					m[ 0] ^= dm & tp[ 0]; m[ 1] ^= dm & tp[ 1];
 					m[ 2] ^= dm & tp[ 2]; m[ 3] ^= dm & tp[ 3];
 					m[ 4] ^= dm & tp[ 4]; m[ 5] ^= dm & tp[ 5];
@@ -289,13 +349,13 @@ void x13_hamsi512_gpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *g_
 }
 
 __host__
-void x13_hamsi512_cpu_hash_64_alexis(int *thr_id, uint32_t threads, uint32_t *d_hash)
+void x13_hamsi512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 384;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x13_hamsi512_gpu_hash_64_alexis<<<grid, block>>>(thr_id, threads, d_hash);
-
+	x13_hamsi512_gpu_hash_64_alexis << <grid, block>> >(threads, d_hash, order);
+//	x13_hamsi512_gpu_hash_64_alexis << <grid, block, 0, streamk[thr_id] >> >(threads, d_hash, order);
 }

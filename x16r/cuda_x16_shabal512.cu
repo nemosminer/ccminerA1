@@ -233,9 +233,11 @@ __constant__ static const sph_u32 C_init_512[] = {
 __constant__ static uint32_t c_PaddedMessage80[20];
 
 __host__
-void x16_shabal512_setBlock_80(void *pdata)
+void x16_shabal512_setBlock_80(int thr_id, void *pdata)
 {
-	cudaMemcpyToSymbol(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 #define TPB_SHABAL 256
@@ -348,5 +350,6 @@ void x16_shabal512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	x16_shabal512_gpu_hash_80 <<<grid, block >>>(threads, startNonce, d_hash);
+	x16_shabal512_gpu_hash_80 << <grid, block>> >(threads, startNonce, d_hash);
+//	x16_shabal512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> >(threads, startNonce, d_hash);
 }

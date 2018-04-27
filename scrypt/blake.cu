@@ -1,3 +1,4 @@
+#if 0
 //
 //  =============== BLAKE part on nVidia GPU ======================
 //
@@ -451,3 +452,4 @@ void default_free_blake256(int thr_id)
 	}
 }
 
+#endif

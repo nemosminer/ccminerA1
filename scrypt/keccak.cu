@@ -1,3 +1,4 @@
+#if 0
 //
 //  =============== KECCAK part on nVidia GPU ======================
 //
@@ -490,3 +491,4 @@ extern "C" void post_keccak512(int thr_id, int stream, uint32_t nonce, int throu
 
 	cuda_post_keccak512<<<grid, block, 0, context_streams[stream][thr_id]>>>(context_odata[stream][thr_id], context_hash[stream][thr_id], nonce);
 }
+#endif

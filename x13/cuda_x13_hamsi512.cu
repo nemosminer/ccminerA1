@@ -15,7 +15,6 @@ typedef unsigned char BitSequence;
 static __constant__ uint32_t d_alpha_n[32];
 static __constant__ uint32_t d_alpha_f[32];
 static __constant__ uint32_t d_T512[64][16];
-
 static const uint32_t alpha_n[] = {
 	0xff00f0f0, 0xccccaaaa, 0xf0f0cccc, 0xff00aaaa, 0xccccaaaa, 0xf0f0ff00, 0xaaaacccc, 0xf0f0ff00,
 	0xf0f0cccc, 0xaaaaff00, 0xccccff00, 0xaaaaf0f0, 0xaaaaf0f0, 0xff00cccc, 0xccccf0f0, 0xff00aaaa,
@@ -318,7 +317,7 @@ static const uint32_t T512[64][16] = {
 };
 
 __global__
-void x13_hamsi512_gpu_hash_64(int *thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x13_hamsi512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -410,29 +409,32 @@ void x13_hamsi512_gpu_hash_64(int *thr_id, uint32_t threads, uint32_t startNounc
 __host__
 void x13_hamsi512_cpu_init(int thr_id, uint32_t threads)
 {
+
 	cudaMemcpyToSymbol(d_alpha_n, alpha_n, sizeof(uint32_t)*32, 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_alpha_f, alpha_f, sizeof(uint32_t)*32, 0, cudaMemcpyHostToDevice);
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_T512, T512, sizeof(uint32_t)*64*16, 0, cudaMemcpyHostToDevice));
 }
 
 __host__
-void x13_hamsi512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void x13_hamsi512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x13_hamsi512_gpu_hash_64<<<grid, block>>>(thr_id, threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	x13_hamsi512_gpu_hash_64<<<grid, block, 0, streamk[thr_id]>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __constant__ static uint64_t c_PaddedMessage80[10];
 
 __host__
-void x16_hamsi512_setBlock_80(void *pdata)
+void x16_hamsi512_setBlock_80(int thr_id, void *pdata)
 {
-	cudaMemcpyToSymbol(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_PaddedMessage80, pdata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 __global__
@@ -548,5 +550,6 @@ void x16_hamsi512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	x16_hamsi512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash);
+	x16_hamsi512_gpu_hash_80 << <grid, block>> > (threads, startNounce, (uint64_t*)d_hash);
+//	x16_hamsi512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, (uint64_t*)d_hash);
 }

@@ -1320,8 +1320,8 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	json_error_t err;
 	bool ret = false;
 
-	if (sctx->rpc2)
-		return rpc2_stratum_authorize(sctx, user, pass);
+//	if (sctx->rpc2)
+//		return rpc2_stratum_authorize(sctx, user, pass);
 
 	s = (char*)malloc(80 + strlen(user) + strlen(pass));
 	sprintf(s, "{\"id\": 2, \"method\": \"mining.authorize\", \"params\": [\"%s\", \"%s\"]}",
@@ -1894,10 +1894,10 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		ret = stratum_show_message(sctx, id, params);
 		goto out;
 	}
-	if (sctx->rpc2 && !strcasecmp(method, "job")) { // xmr/bbr
-		ret = rpc2_stratum_job(sctx, id, params);
-		goto out;
-	}
+//	if (sctx->rpc2 && !strcasecmp(method, "job")) { // xmr/bbr
+//		ret = rpc2_stratum_job(sctx, id, params);
+//		goto out;
+//	}
 
 	if (!ret) {
 		// don't fail = disconnect stratum on unknown (and optional?) methods
@@ -2124,7 +2124,7 @@ static uint32_t zrtest[20] = {
 
 void do_gpu_tests(void)
 {
-#ifdef _DEBUG
+#if 0//def _DEBUG
 	unsigned long done;
 	char s[128] = { '\0' };
 	struct work work;
@@ -2325,7 +2325,7 @@ void print_hash_tests(void)
 	x15hash(&hash[0], &buf[0]);
 	printpfx("X15", hash);
 
-	x16r_hash(thr_id, &hash[0], &buf[0]);
+	x16r_hash(&hash[0], &buf[0]);
 	printpfx("X16r", hash);
 
 	x17hash(&hash[0], &buf[0]);

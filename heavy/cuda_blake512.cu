@@ -1,3 +1,4 @@
+#if 0
 #include <stdio.h>
 #include <memory.h>
 
@@ -262,3 +263,4 @@ __host__ void blake512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNoun
 	else if (BLOCKSIZE == 84)
 		blake512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash5output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 }
+#endif

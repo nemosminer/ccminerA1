@@ -32,9 +32,9 @@ extern int cuda_arch[MAX_GPUS];
 extern int cuda_get_arch(int thr_id);
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);
 extern void cuda_check_cpu_free(int thr_id);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_hash(int *thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash);
-extern uint32_t cuda_check_hash_suppl(int *thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce);
+extern void cuda_check_cpu_setTarget(const void *ptarget, int thr_id);
+extern uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, int *order);
+extern uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce, int *order);
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 extern void cudaReportHardwareFailure(int thr_id, cudaError_t error, const char* func);
 extern __device__ __device_builtin__ void __syncthreads(void);
@@ -717,6 +717,8 @@ uint32_t bfi(uint32_t x, uint32_t a, uint32_t bit, uint32_t numBits) {
 	asm("bfi.b32 %0, %1, %2, %3,%4;" : "=r"(ret) : "r"(x), "r"(a), "r"(bit), "r"(numBits));
 	return ret;
 }
+
+extern cudaStream_t streamk[MAX_GPUS];
 
 #endif // #ifndef CUDA_HELPER_H
 

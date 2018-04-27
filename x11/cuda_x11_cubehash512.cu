@@ -2,6 +2,7 @@
 //#include <cuda_vectors.h>
 #include "cuda_helper_alexis.h"
 #include "cuda_vectors_alexis.h"
+/* Alexis78 64 round kernel implementation */
 
 #define CUBEHASH_ROUNDS 16 /* this is r for CubeHashr/b */
 #define CUBEHASH_BLOCKBYTES 32 /* this is b for CubeHashr/b */
@@ -32,118 +33,118 @@ static const uint32_t c_IV_512[32] = {
 __device__ __forceinline__
 static void rrounds(uint32_t x[2][2][2][2][2])
 {
-    int r;
-    int j;
-    int k;
-    int l;
-    int m;
+	int r;
+	int j;
+	int k;
+	int l;
+	int m;
 
-//#pragma unroll 16
-    for (r = 0;r < CUBEHASH_ROUNDS;++r) {
+	//#pragma unroll 16
+	for (r = 0; r < CUBEHASH_ROUNDS; ++r) {
 
-        /* "add x_0jklm into x_1jklmn modulo 2^32" */
+		/* "add x_0jklm into x_1jklmn modulo 2^32" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+		for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (k = 0;k < 2;++k)
+			for (k = 0; k < 2; ++k)
 #pragma unroll 2
-                for (l = 0;l < 2;++l)
+				for (l = 0; l < 2; ++l)
 #pragma unroll 2
-                    for (m = 0;m < 2;++m)
-                        x[1][j][k][l][m] += x[0][j][k][l][m];
+					for (m = 0; m < 2; ++m)
+						x[1][j][k][l][m] += x[0][j][k][l][m];
 
-        /* "rotate x_0jklm upwards by 7 bits" */
+		/* "rotate x_0jklm upwards by 7 bits" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+		for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (k = 0;k < 2;++k)
+			for (k = 0; k < 2; ++k)
 #pragma unroll 2
-                for (l = 0;l < 2;++l)
+				for (l = 0; l < 2; ++l)
 #pragma unroll 2
-                    for (m = 0;m < 2;++m)
-                        x[0][j][k][l][m] = ROTATEUPWARDS7(x[0][j][k][l][m]);
+					for (m = 0; m < 2; ++m)
+						x[0][j][k][l][m] = ROTATEUPWARDS7(x[0][j][k][l][m]);
 
-        /* "swap x_00klm with x_01klm" */
+		/* "swap x_00klm with x_01klm" */
 #pragma unroll 2
-        for (k = 0;k < 2;++k)
+		for (k = 0; k < 2; ++k)
 #pragma unroll 2
-            for (l = 0;l < 2;++l)
+			for (l = 0; l < 2; ++l)
 #pragma unroll 2
-                for (m = 0;m < 2;++m)
-                    SWAP(x[0][0][k][l][m],x[0][1][k][l][m])
+				for (m = 0; m < 2; ++m)
+					SWAP(x[0][0][k][l][m], x[0][1][k][l][m])
 
-        /* "xor x_1jklm into x_0jklm" */
+					/* "xor x_1jklm into x_0jklm" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+					for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (k = 0;k < 2;++k)
+						for (k = 0; k < 2; ++k)
 #pragma unroll 2
-                for (l = 0;l < 2;++l)
+							for (l = 0; l < 2; ++l)
 #pragma unroll 2
-                    for (m = 0;m < 2;++m)
-                        x[0][j][k][l][m] ^= x[1][j][k][l][m];
+								for (m = 0; m < 2; ++m)
+									x[0][j][k][l][m] ^= x[1][j][k][l][m];
 
-        /* "swap x_1jk0m with x_1jk1m" */
+		/* "swap x_1jk0m with x_1jk1m" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+		for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (k = 0;k < 2;++k)
+			for (k = 0; k < 2; ++k)
 #pragma unroll 2
-                for (m = 0;m < 2;++m)
-                    SWAP(x[1][j][k][0][m],x[1][j][k][1][m])
+				for (m = 0; m < 2; ++m)
+					SWAP(x[1][j][k][0][m], x[1][j][k][1][m])
 
-        /* "add x_0jklm into x_1jklm modulo 2^32" */
+					/* "add x_0jklm into x_1jklm modulo 2^32" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+					for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (k = 0;k < 2;++k)
+						for (k = 0; k < 2; ++k)
 #pragma unroll 2
-                for (l = 0;l < 2;++l)
+							for (l = 0; l < 2; ++l)
 #pragma unroll 2
-                    for (m = 0;m < 2;++m)
-                        x[1][j][k][l][m] += x[0][j][k][l][m];
+								for (m = 0; m < 2; ++m)
+									x[1][j][k][l][m] += x[0][j][k][l][m];
 
-        /* "rotate x_0jklm upwards by 11 bits" */
+		/* "rotate x_0jklm upwards by 11 bits" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+		for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (k = 0;k < 2;++k)
+			for (k = 0; k < 2; ++k)
 #pragma unroll 2
-                for (l = 0;l < 2;++l)
+				for (l = 0; l < 2; ++l)
 #pragma unroll 2
-                    for (m = 0;m < 2;++m)
-                        x[0][j][k][l][m] = ROTATEUPWARDS11(x[0][j][k][l][m]);
+					for (m = 0; m < 2; ++m)
+						x[0][j][k][l][m] = ROTATEUPWARDS11(x[0][j][k][l][m]);
 
-        /* "swap x_0j0lm with x_0j1lm" */
+		/* "swap x_0j0lm with x_0j1lm" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+		for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (l = 0;l < 2;++l)
+			for (l = 0; l < 2; ++l)
 #pragma unroll 2
-                for (m = 0;m < 2;++m)
-                    SWAP(x[0][j][0][l][m],x[0][j][1][l][m])
+				for (m = 0; m < 2; ++m)
+					SWAP(x[0][j][0][l][m], x[0][j][1][l][m])
 
-        /* "xor x_1jklm into x_0jklm" */
+					/* "xor x_1jklm into x_0jklm" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+					for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (k = 0;k < 2;++k)
+						for (k = 0; k < 2; ++k)
 #pragma unroll 2
-                for (l = 0;l < 2;++l)
+							for (l = 0; l < 2; ++l)
 #pragma unroll 2
-                    for (m = 0;m < 2;++m)
-                        x[0][j][k][l][m] ^= x[1][j][k][l][m];
+								for (m = 0; m < 2; ++m)
+									x[0][j][k][l][m] ^= x[1][j][k][l][m];
 
-        /* "swap x_1jkl0 with x_1jkl1" */
+		/* "swap x_1jkl0 with x_1jkl1" */
 #pragma unroll 2
-        for (j = 0;j < 2;++j)
+		for (j = 0; j < 2; ++j)
 #pragma unroll 2
-            for (k = 0;k < 2;++k)
+			for (k = 0; k < 2; ++k)
 #pragma unroll 2
-                for (l = 0;l < 2;++l)
-                    SWAP(x[1][j][k][l][0],x[1][j][k][l][1])
+				for (l = 0; l < 2; ++l)
+					SWAP(x[1][j][k][l][0], x[1][j][k][l][1])
 
-    }
+	}
 }
 
 __device__ __forceinline__
@@ -160,11 +161,11 @@ __device__ __forceinline__
 static void hash_fromx(uint32_t hash[16], uint32_t const x[2][2][2][2][2])
 {
 	// used to write final hash to global mem
-	AS_UINT2(&hash[ 0]) = AS_UINT2(x[0][0][0][0]);
-	AS_UINT2(&hash[ 2]) = AS_UINT2(x[0][0][0][1]);
-	AS_UINT2(&hash[ 4]) = AS_UINT2(x[0][0][1][0]);
-	AS_UINT2(&hash[ 6]) = AS_UINT2(x[0][0][1][1]);
-	AS_UINT2(&hash[ 8]) = AS_UINT2(x[0][1][0][0]);
+	AS_UINT2(&hash[0]) = AS_UINT2(x[0][0][0][0]);
+	AS_UINT2(&hash[2]) = AS_UINT2(x[0][0][0][1]);
+	AS_UINT2(&hash[4]) = AS_UINT2(x[0][0][1][0]);
+	AS_UINT2(&hash[6]) = AS_UINT2(x[0][0][1][1]);
+	AS_UINT2(&hash[8]) = AS_UINT2(x[0][1][0][0]);
 	AS_UINT2(&hash[10]) = AS_UINT2(x[0][1][0][1]);
 	AS_UINT2(&hash[12]) = AS_UINT2(x[0][1][1][0]);
 	AS_UINT2(&hash[14]) = AS_UINT2(x[0][1][1][1]);
@@ -204,7 +205,7 @@ static void Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
 	x[1][1][1][1][1] ^= 1;
 
 	/* "the state is then transformed invertibly through 10r identical rounds" */
-	#pragma unroll 10
+#pragma unroll 10
 	for (int i = 0; i < 10; i++) rrounds(x);
 
 	/* "output the first h/8 bytes of the state" */
@@ -215,10 +216,9 @@ static void Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
 /***************************************************/
 
 __global__
-void x11_cubehash512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash)
+void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *zombie_pigman)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*zombie_pigman) { __syncthreads(); return; }
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -236,8 +236,8 @@ void x11_cubehash512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash
 		// Padding Block
 		uint32_t last[8];
 		last[0] = 0x80;
-		#pragma unroll 7
-		for (int i=1; i < 8; i++) last[i] = 0;
+#pragma unroll 7
+		for (int i = 1; i < 8; i++) last[i] = 0;
 		Update32(x, last);
 
 		Final(x, Hash);
@@ -245,16 +245,20 @@ void x11_cubehash512_gpu_hash_64(int *thr_id, uint32_t threads, uint64_t *g_hash
 }
 
 __host__
-void x11_cubehash512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
+void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *zomebie_pigman)
 {
 	const uint32_t threadsperblock = 256;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
 	size_t shared_size = 0;
 
-	x11_cubehash512_gpu_hash_64 << <grid, block, shared_size >> >(thr_id, threads, (uint64_t*)d_hash);
+	x11_cubehash512_gpu_hash_64 << <grid, block, shared_size>> >(threads, (uint64_t*)d_hash, zomebie_pigman);
+//	if (thr_id < MAX_GPUS)
+//		x11_cubehash512_gpu_hash_64 << <grid, block, shared_size, streamk[thr_id] >> >(threads, (uint64_t*)d_hash, zomebie_pigman);
+//	else
+//		x11_cubehash512_gpu_hash_64 << <grid, block, shared_size, streamk[thr_id + MAX_GPUS] >> >(threads, (uint64_t*)d_hash, zomebie_pigman);
 }
 
 __host__
@@ -272,7 +276,9 @@ static uint32_t c_PaddedMessage80[20];
 __host__
 void cubehash512_setBlock_80(int thr_id, uint32_t* endiandata)
 {
-	cudaMemcpyToSymbol(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice);
+//	cudaMemcpy(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbolAsync(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, 0);
+//	cudaMemcpyToSymbolAsync(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
 }
 
 __global__
@@ -306,7 +312,7 @@ void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce,
 		message[7] = 0;
 		Update32(x, message);
 
-		uint32_t* output = (uint32_t*) (&g_outhash[(size_t)8 * thread]);
+		uint32_t* output = (uint32_t*)(&g_outhash[(size_t)8 * thread]);
 		Final(x, output);
 	}
 }
@@ -315,10 +321,11 @@ __host__
 void cubehash512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 256;
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	cubehash512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, (uint64_t*) d_hash);
+	cubehash512_gpu_hash_80 << <grid, block>> > (threads, startNounce, (uint64_t*)d_hash);
+//	cubehash512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, (uint64_t*)d_hash);
 }
 
 #endif

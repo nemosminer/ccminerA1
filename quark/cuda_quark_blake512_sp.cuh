@@ -90,10 +90,9 @@ __global__
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(256, 1)
 #endif
-void quark_blake512_gpu_hash_64_sp(int *thr_id, uint32_t threads, uint2* g_hash)
+void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint2* g_hash, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
+	if (*order) { __syncthreads(); return; }
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	if (thread < threads)
@@ -103,7 +102,7 @@ void quark_blake512_gpu_hash_64_sp(int *thr_id, uint32_t threads, uint2* g_hash)
 
 		uint2 msg[16];
 
-		uint2x4 *phash = (uint2x4*)&g_hash[hashPosition * 8U];
+		uint2x4 *phash = (uint2x4*)&g_hash[hashPosition << 3];
 		uint2x4 *outpt = (uint2x4*)msg;
 		outpt[0] = phash[0];
 		outpt[1] = phash[1];
@@ -576,7 +575,9 @@ __host__ void quark_blake512_cpu_setBlock_80_sp(int thr_id, uint64_t *pdata)
 	for (int i = 0; i < 10; i++)
 		PaddedMessage[i] = cuda_swab64(pdata[i]);
 
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol((c_PaddedM), PaddedMessage, 10 * sizeof(uint64_t)));
+//	CUDA_SAFE_CALL(cudaMemcpy((c_PaddedM), PaddedMessage, 10 * sizeof(uint64_t), cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync((c_PaddedM), PaddedMessage, 10 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice, 0));
+//	CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync((c_PaddedM), PaddedMessage, 10 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice, streamk[thr_id]));
 
 	block[0] = peker[0];
 	block[1] = peker[1];
@@ -643,30 +644,36 @@ __host__ void quark_blake512_cpu_setBlock_80_sp(int thr_id, uint64_t *pdata)
 
 	v[3] += (block[0xd] ^ u512[6]) + v[7];
 
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Hostprecalc, v, 128, 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(c_Hostprecalc, v, 128, 0, cudaMemcpyHostToDevice, 0));
+//	CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(c_Hostprecalc, v, 128, 0, cudaMemcpyHostToDevice, streamk[thr_id]));
 }
 
 #else
 // __CUDA_ARCH__ < 500
 __host__ void quark_blake512_cpu_setBlock_80_sp(int thr_id, uint64_t *pdata) {}
-__global__ void quark_blake512_gpu_hash_64_sp(int *thr_id, uint32_t, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ g_hash) {}
+__global__ void quark_blake512_gpu_hash_64_sp(uint32_t, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ g_hash) {}
 __global__ void quark_blake512_gpu_hash_80_sp(uint32_t, uint32_t startNounce, uint2 *outputHash) {}
 #endif
 
 __host__
-void quark_blake512_cpu_hash_64_sp(int *thr_id, uint32_t threads, uint32_t *d_outputHash)
+void quark_blake512_cpu_hash_64_sp(int thr_id, uint32_t threads, uint32_t *d_outputHash, int *order)
 {
 	const uint32_t threadsperblock = 32;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-	quark_blake512_gpu_hash_64_sp <<<grid, block>>>(thr_id, threads, (uint2*)d_outputHash);
+	quark_blake512_gpu_hash_64_sp << <grid, block>> >(threads, (uint2*)d_outputHash, order);
+//	if (thr_id < MAX_GPUS)
+//		quark_blake512_gpu_hash_64_sp << <grid, block, 0, streamk[thr_id] >> >(threads, (uint2*)d_outputHash, order);
+//	else
+//		quark_blake512_gpu_hash_64_sp << <grid, block, 0, streamk[thr_id + MAX_GPUS] >> >(threads, (uint2*)d_outputHash, order);
 }
 
 __host__
-void quark_blake512_cpu_hash_80_sp(uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
+void quark_blake512_cpu_hash_80_sp(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
 {
 	const uint32_t threadsperblock = 64;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	quark_blake512_gpu_hash_80_sp <<<grid, block>>>(threads, startNounce, (uint2*)d_outputHash);
+	quark_blake512_gpu_hash_80_sp << <grid, block>> >(threads, startNounce, (uint2*)d_outputHash);
+//	quark_blake512_gpu_hash_80_sp << <grid, block, 0, streamk[thr_id] >> >(threads, startNounce, (uint2*)d_outputHash);
 }

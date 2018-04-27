@@ -3,12 +3,14 @@
  */
 
 #include "miner.h"
-#include "cuda_helper_alexis.h"
+//#include "cuda_helper_alexis.h"
+#include "cuda_helper.h"
+extern cudaStream_t streamk[MAX_GPUS*2];
 
 #define TPB 128
 
-uint32_t *d_state[MAX_GPUS];
-uint4 *d_temp4[MAX_GPUS];
+uint32_t *d_state[MAX_GPUS*2];
+uint4 *d_temp4[MAX_GPUS*2];
 
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
@@ -364,8 +366,8 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 	int expanded[32];
 #pragma unroll 4
 	for (int i=0; i < 4; i++) {
-		expanded[  i] = __byte_perm(__shfl((int)data[0], 2*i, 8), __shfl((int)data[0], (2*i)+1, 8), threadIdx.x&7)&0xff;
-		expanded[4+i] = __byte_perm(__shfl((int)data[1], 2*i, 8), __shfl((int)data[1], (2*i)+1, 8), threadIdx.x&7)&0xff;
+		expanded[  i] = __byte_perm(__shfl((int)data[0], i<<1, 8), __shfl((int)data[0], (i<<1)+1, 8), threadIdx.x&7)&0xff;
+		expanded[4+i] = __byte_perm(__shfl((int)data[1], i<<1, 8), __shfl((int)data[1], (i<<1)+1, 8), threadIdx.x&7)&0xff;
 	}
 #pragma unroll 8
 	for (int i=8; i < 16; i++)
@@ -585,14 +587,13 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 /***************************************************/
 
 __global__ __launch_bounds__(TPB, 4)
-void x11_simd512_gpu_expand_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_temp4)
+void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp4, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
-	int threadBloc = (blockDim.x * blockIdx.x + threadIdx.x) / 8;
+	if (*order) { __syncthreads(); return; }
+	int threadBloc = (blockDim.x * blockIdx.x + threadIdx.x) >> 3;
 	if (threadBloc < threads)
 	{
-		int hashPosition = threadBloc * 16;
+		int hashPosition = threadBloc << 4;
 		uint32_t *inpHash = &g_hash[hashPosition];
 
 		// Read hash per 8 threads
@@ -602,18 +603,16 @@ void x11_simd512_gpu_expand_64(int *thr_id, uint32_t threads, uint32_t *g_hash, 
 		Hash[1] = inpHash[ndx + 8];
 
 		// Puffer für expandierte Nachricht
-		uint4 *temp4 = &g_temp4[hashPosition * 4];
+		uint4 *temp4 = &g_temp4[hashPosition << 2];
 
 		Expansion(Hash, temp4);
 	}
 }
 
 __global__ __launch_bounds__(TPB, 1)
-void x11_simd512_gpu_compress1_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
+void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
-
+	if (*order) return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -623,11 +622,9 @@ void x11_simd512_gpu_compress1_64(int *thr_id, uint32_t threads, uint32_t *g_has
 }
 
 __global__ __launch_bounds__(TPB, 1)
-void x11_simd512_gpu_compress2_64(int *thr_id, uint32_t threads, uint4 *g_fft4, uint32_t *g_state)
+void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_state, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
-
+	if (*order) return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -636,11 +633,9 @@ void x11_simd512_gpu_compress2_64(int *thr_id, uint32_t threads, uint4 *g_fft4, 
 }
 
 __global__ __launch_bounds__(TPB, 2)
-void x11_simd512_gpu_compress_64_maxwell(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
+void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order)
 {
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
-
+	if (*order) { __syncthreads(); return; }
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -651,11 +646,9 @@ void x11_simd512_gpu_compress_64_maxwell(int *thr_id, uint32_t threads, uint32_t
 }
 
 __global__ __launch_bounds__(TPB, 2)
-void x11_simd512_gpu_final_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
-{
-	if ((*(int*)(((uintptr_t)thr_id) & ~15ULL)) & 0x40)
-		return;
-
+void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order)
+{ 
+	if (*order) return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -665,11 +658,11 @@ void x11_simd512_gpu_final_64(int *thr_id, uint32_t threads, uint32_t *g_hash, u
 }
 
 #else
-__global__ void x11_simd512_gpu_expand_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_temp4) {}
-__global__ void x11_simd512_gpu_compress1_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state) {}
-__global__ void x11_simd512_gpu_compress2_64(int *thr_id, uint32_t threads, uint4 *g_fft4, uint32_t *g_state) {}
-__global__ void x11_simd512_gpu_compress_64_maxwell(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state) {}
-__global__ void x11_simd512_gpu_final_64(int *thr_id, uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state) {}
+__global__ void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp4, int *order) {}
+__global__ void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order) {}
+__global__ void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_state, int *order) {}
+__global__ void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order) {}
+__global__ void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order) {}
 #endif /* SM3+ */
 
 __host__
@@ -690,7 +683,8 @@ int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 	}
 	else
 #endif
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_temp4[thr_id], 64 * sizeof(uint4)*threads), (int)err); /* todo: prevent -i 21 */
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_temp4[thr_id], 64* sizeof(uint4)*threads), (int)err); /* todo: prevent -i 21 */
+	//CUDA_CALL_OR_RET_X(cudaMalloc(&d_temp4[thr_id], 64 * sizeof(uint4)*threads), (int)err); /* todo: prevent -i 21 */
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_state[thr_id], 32 * sizeof(int)*threads), (int)err);
 
 #ifndef DEVICE_DIRECT_CONSTANTS
@@ -706,12 +700,12 @@ int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 #endif
 
 	// Texture for 128-Bit Zugriffe
-	cudaChannelFormatDesc channelDesc128 = cudaCreateChannelDesc<uint4>();
-	texRef1D_128.normalized = 0;
-	texRef1D_128.filterMode = cudaFilterModePoint;
-	texRef1D_128.addressMode[0] = cudaAddressModeClamp;
+//	cudaChannelFormatDesc channelDesc128 = cudaCreateChannelDesc<uint4>();
+//	texRef1D_128.normalized = 0;
+//	texRef1D_128.filterMode = cudaFilterModePoint;
+//	texRef1D_128.addressMode[0] = cudaAddressModeClamp;
 
-	CUDA_CALL_OR_RET_X(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads), (int) err);
+//	CUDA_CALL_OR_RET_X(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads), (int) err);
 
 	return 0;
 }
@@ -727,25 +721,49 @@ void x11_simd512_cpu_free(int thr_id)
 }
 
 __host__
-void x11_simd512_cpu_hash_64(int *thr_id, uint32_t threads, uint32_t *d_hash)
+void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = TPB;
-	int dev_id = device_map[((uintptr_t)thr_id) & 15];
+//	int dev_id = device_map[thr_id];
 	//2097152
 	dim3 block(threadsperblock);
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 gridX8(grid.x * 8);
+#if 0
+	x11_simd512_gpu_expand_64 << <gridX8, block, 0, streamk[thr_id] >> > (threads, d_hash, d_temp4[thr_id], order);
 
-	x11_simd512_gpu_expand_64 << <gridX8, block >> > (thr_id, threads, d_hash, d_temp4[((uintptr_t)thr_id) & 15]);
+	x11_simd512_gpu_compress_64_maxwell << < grid, block, 0, streamk[thr_id] >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
 
-	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500) {
-		x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (thr_id, threads, d_hash, d_temp4[((uintptr_t)thr_id) & 15], d_state[((uintptr_t)thr_id) & 15]);
-	} else {
-		x11_simd512_gpu_compress1_64 << < grid, block >> > (thr_id, threads, d_hash, d_temp4[((uintptr_t)thr_id) & 15], d_state[((uintptr_t)thr_id) & 15]);
-		x11_simd512_gpu_compress2_64 << < grid, block >> > (thr_id, threads, d_temp4[((uintptr_t)thr_id) & 15], d_state[((uintptr_t)thr_id) & 15]);
+	x11_simd512_gpu_final_64 << <grid, block, 0, streamk[thr_id] >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+#elif 1
+	x11_simd512_gpu_expand_64 << <gridX8, block>> > (threads, d_hash, d_temp4[thr_id], order);
+
+	x11_simd512_gpu_compress_64_maxwell << < grid, block>> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+
+	x11_simd512_gpu_final_64 << <grid, block>> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+#elif 0
+	if (thr_id < MAX_GPUS)
+	{
+		x11_simd512_gpu_expand_64 << <gridX8, block, 0, streamk[thr_id] >> > (threads, d_hash, d_temp4[thr_id], order);
+
+		x11_simd512_gpu_compress_64_maxwell << < grid, block, 0, streamk[thr_id] >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+
+		x11_simd512_gpu_final_64 << <grid, block, 0, streamk[thr_id] >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
 	}
+	else
+	{
+		x11_simd512_gpu_expand_64 << <gridX8, block, 0, streamk[thr_id + MAX_GPUS] >> > (threads, d_hash, d_temp4[thr_id], order);
 
-	x11_simd512_gpu_final_64 << <grid, block >> > (thr_id, threads, d_hash, d_temp4[((uintptr_t)thr_id) & 15], d_state[((uintptr_t)thr_id) & 15]);
+		x11_simd512_gpu_compress_64_maxwell << < grid, block, 0, streamk[thr_id + MAX_GPUS] >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
 
-//	MyStreamSynchronize(NULL, order, thr_id);
+		x11_simd512_gpu_final_64 << <grid, block, 0, streamk[thr_id + MAX_GPUS] >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+	}
+#else
+		x11_simd512_gpu_expand_64 << <gridX8, block>> > (threads, d_hash, d_temp4[thr_id], order);
+
+		x11_simd512_gpu_compress_64_maxwell << < grid, block>> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+
+		x11_simd512_gpu_final_64 << <grid, block>> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+#endif
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
