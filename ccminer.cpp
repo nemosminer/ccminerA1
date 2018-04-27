@@ -1799,7 +1799,7 @@ void restart_threads(void)
 		applog(LOG_DEBUG, "%s", __FUNCTION__);
 	// restart mining thread IRL
 #if 1
-	pthread_mutex_lock(&ark_lock);
+//	pthread_mutex_lock(&ark_lock);
 	if (stratum.job.clean) 
 	{
 		for (int i = 0; i < opt_n_threads && work_restart; i++) if (!work_restart[i].restart)
@@ -1807,11 +1807,11 @@ void restart_threads(void)
 			work_restart[i].restart = 1;
 			ark_switch(i);
 		}
-		pthread_mutex_unlock(&ark_lock);
+//		pthread_mutex_unlock(&ark_lock);
 	}
 	else
 	{
-		pthread_mutex_unlock(&ark_lock);
+//		pthread_mutex_unlock(&ark_lock);
 		for (int i = 0; i < opt_n_threads && work_restart; i++)
 			if (!work_restart[i].restart)
 				work_restart[i].restart = 1;

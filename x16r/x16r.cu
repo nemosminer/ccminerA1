@@ -709,11 +709,11 @@ __host__ void ark_switch(int thr_id)
 	if (init_items[thr_id] && *h_ark[thr_id] == 0)
 	{
 		cudaSetDevice(device_map[thr_id]);
-		*h_ark[thr_id] = 1;
 //		set_hi << <1, 1, 0, streamx[0]>> >(d_ark[thr_id]);
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[0]));
 		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamx[0]));
 	}
+	*h_ark[thr_id] = 1;
 }
 //CUDA_API_PER_THREAD_DEFAULT_STREAM
 __host__ void ark_reset(int thr_id)
@@ -723,12 +723,12 @@ __host__ void ark_reset(int thr_id)
 	if (*h_ark[thr_id])
 	{
 
-		*h_ark[thr_id] = 0;
 //		pthread_mutex_unlock(&ark_lock);
 		//		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[thr_id]));
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[thr_id]));
 		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamx[0]));
 	}// else
+	*h_ark[thr_id] = 0;
 //		pthread_mutex_unlock(&ark_lock);
 //	CUDA_SAFE_CALL(cudaStreamSynchronize(streamx[thr_id]));
 }
