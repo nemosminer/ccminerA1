@@ -2721,7 +2721,6 @@ static void *miner_thread(void *userdata)
 
 		/* if nonce found, submit work */
 		if (rc > 0 && !opt_benchmark) {
-//			work_done = 1;
 			uint32_t curnonce = nonceptr[0]; // current scan position
 
 			if (opt_led_mode == LED_MODE_SHARES)
@@ -2763,6 +2762,9 @@ static void *miner_thread(void *userdata)
 				work.nonces[1] = 0; // reset
 			}
 		}
+		else
+			work_done = 1;
+
 	}
 	
 out:

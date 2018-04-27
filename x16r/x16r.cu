@@ -342,8 +342,10 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		*h_ark[thr_id] = 0;
 		if (thr_id == 0)
 		{
-			CUDA_SAFE_CALL(cudaStreamCreate(&streamx[0]));
+//			CUDA_SAFE_CALL(cudaStreamCreate(&streamx[0]));
 			CUDA_SAFE_CALL(cudaStreamCreate(&streamk[0]));
+//			CUDA_SAFE_CALL(cudaStreamCreateWithPriority(&streamk[0], 0, 0));
+			CUDA_SAFE_CALL(cudaStreamCreateWithPriority(&streamx[0], cudaStreamNonBlocking, -1));
 		}
 		else
 		{
@@ -531,7 +533,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	int warn = 0;
 	do {
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id]);
-//		cudaStreamSynchronize(streamx[0]);
+		cudaStreamSynchronize(streamx[0]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (3 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
