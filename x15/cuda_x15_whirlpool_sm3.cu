@@ -2374,16 +2374,16 @@ void whirlpool512_setBlock_80_sm3(void *pdata, const void *ptarget)
 __host__
 void x16_whirlpool512_init(int thr_id, uint32_t threads)
 {
-	cudaMemcpyToSymbolAsync(InitVector_RC, plain_RC, sizeof(plain_RC), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
-	cudaMemcpyToSymbolAsync(mixTob0Tox, plain_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
+	cudaMemcpyToSymbolAsync(InitVector_RC, plain_RC, sizeof(plain_RC), 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(mixTob0Tox, plain_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice, 0);
 #if USE_ALL_TABLES
-	cudaMemcpyToSymbolAsync(mixTob1Tox, plain_T1, (256 * 8), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
-	cudaMemcpyToSymbolAsync(mixTob2Tox, plain_T2, (256 * 8), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
-	cudaMemcpyToSymbolAsync(mixTob3Tox, plain_T3, (256 * 8), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
-	cudaMemcpyToSymbolAsync(mixTob4Tox, plain_T4, (256 * 8), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
-	cudaMemcpyToSymbolAsync(mixTob5Tox, plain_T5, (256 * 8), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
-	cudaMemcpyToSymbolAsync(mixTob6Tox, plain_T6, (256 * 8), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
-	cudaMemcpyToSymbolAsync(mixTob7Tox, plain_T7, (256 * 8), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
+	cudaMemcpyToSymbolAsync(mixTob1Tox, plain_T1, (256 * 8), 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(mixTob2Tox, plain_T2, (256 * 8), 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(mixTob3Tox, plain_T3, (256 * 8), 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(mixTob4Tox, plain_T4, (256 * 8), 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(mixTob5Tox, plain_T5, (256 * 8), 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(mixTob6Tox, plain_T6, (256 * 8), 0, cudaMemcpyHostToDevice, 0);
+	cudaMemcpyToSymbolAsync(mixTob7Tox, plain_T7, (256 * 8), 0, cudaMemcpyHostToDevice, 0);
 #endif
 
 }

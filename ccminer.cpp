@@ -2,10 +2,11 @@
  * Copyright 2010 Jeff Garzik
  * Copyright 2012-2014 pooler
  * Copyright 2014-2018 tpruvot
- * Copyright 2016      Alexis78
+ * Copyright 2016      Alexis78 - Improved many of the kernels implemented in this x16r miner
  * Copyright 2018      brianmct
  * Copyright 2018      a1i3nj03
  *
+ * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
  * Software Foundation; either version 2 of the License, or (at your option)

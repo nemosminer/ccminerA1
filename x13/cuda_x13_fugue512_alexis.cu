@@ -3,8 +3,9 @@
  * 
  * Built on cbuchner1's implementation, actual hashing code
  * heavily based on phm's sgminer
- *
  * 
+ * Alexis78's fugue512 kernel modifications
+ *
  */
 
 #include "cuda_helper_alexis.h"

@@ -404,5 +404,6 @@ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x13_fugue512_gpu_hash_64 <<<grid, block, 0, streamk[thr_id]>>> (threads, (uint64_t*)d_hash, order);
+	x13_fugue512_gpu_hash_64 << <grid, block>> > (threads, (uint64_t*)d_hash, order);
+//	x13_fugue512_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> > (threads, (uint64_t*)d_hash, order);
 }

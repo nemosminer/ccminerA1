@@ -3,6 +3,7 @@
  *
  * tpruvot 2018 - GPL code
  * a1i3nj03 2018
+ *** Uses many of Alexis78's very good kernels ***
  */
 /*
 compute_70, sm_70
@@ -350,7 +351,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 				sleep(1);
 		}
 //		set_lo << <1, 1 >> >(d_ark[thr_id]);
-		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamk[thr_id]));
+		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamk[0]));
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice));
 		
 		//		CUDA_SAFE_CALL(cudaGetLastError());
@@ -438,7 +439,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 
 		((uint32_t*)ptarget)[7] = 0x003f;
 		*((uint64_t*)&pdata[1]) = 0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
-		*((uint64_t*)&pdata[1]) = 0xbbbbbbbbbbbbbbbb;//2:64,4:80,8,a,e.. error//44B54B9F248C0708//0x31C8B76F520AEDF4;
+//		*((uint64_t*)&pdata[1]) = 0xbbbbbbbbbbbbbbbb;//2:64,4:80,8,a,e.. error//44B54B9F248C0708//0x31C8B76F520AEDF4;
 		//489f 4f38 33f4 7016 //01346789f
 
 	}
