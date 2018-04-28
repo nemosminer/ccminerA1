@@ -194,7 +194,7 @@ char *short_url = NULL;
 struct stratum_ctx stratum = { 0 };
 pthread_mutex_t stratum_sock_lock;
 pthread_mutex_t stratum_work_lock;
-extern "C" pthread_mutex_t ark_lock = 0;
+extern "C" pthread_mutex_t ark_lock;
 
 char *opt_cert;
 char *opt_proxy;
