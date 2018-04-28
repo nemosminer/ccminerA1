@@ -1873,15 +1873,15 @@ void restart_threads(void)
 		break;
 	case 1:
 #ifdef A1MIN3R_MOD
-//		if (stratum.job.clean) for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
-		for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
+		if (stratum.job.clean) for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
+//		for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
 		{
 			work_restart[i].restart = 1;
 			ark_switch(i);
 		}
-//		else for (int i = 0; i < opt_n_threads; i++)
+		else for (int i = 0; i < opt_n_threads; i++)
 		{
-//			work_restart[i].restart = 1;
+			work_restart[i].restart = 1;
 		}
 		break;
 #else
@@ -2086,6 +2086,7 @@ static void *miner_thread(void *userdata)
 			regen = regen || extrajob;
 
 			if (regen) {
+				gpulog(LOG_BLUE, thr_id, "REGEN");
 				work_done = false;
 				extrajob = false;
 				if (stratum_gen_work(&stratum, &g_work))
@@ -2137,15 +2138,16 @@ static void *miner_thread(void *userdata)
 		*/
 		if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {
 			#if 0
-			if (opt_debug) {
+//			if (opt_debug) {
 				for (int n=0; n <= (wcmplen-8); n+=8) {
 					if (memcmp(work.data + n, g_work.data + n, 8)) {
-						applog(LOG_DEBUG, "job %s work updated at offset %d:", g_work.job_id, n);
-						applog_hash((uchar*) &work.data[n]);
+//						applog(LOG_DEBUG, "job %s work updated at offset %d:", g_work.job_id, n);
+						applog(LOG_BLUE, "job %s work updated at offset %d:", g_work.job_id, n);
+						applog_hash((uchar*)&work.data[n]);
 						applog_compare_hash((uchar*) &g_work.data[n], (uchar*) &work.data[n]);
 					}
 				}
-			}
+//			}
 			#endif
 			//*** SIGNAL JOB UPDATE *********************************************************************
 			memcpy(&work, &g_work, sizeof(struct work));
@@ -2400,6 +2402,7 @@ static void *miner_thread(void *userdata)
 			max_nonce = (uint32_t) (max64 + start_nonce);
 
 		// todo: keep it rounded to a multiple of 256 ?
+		max_nonce &= ~0xff;
 
 		if (unlikely(start_nonce > max_nonce)) {
 			// should not happen but seen in skein2 benchmark with 2 gpus
@@ -2508,7 +2511,8 @@ static void *miner_thread(void *userdata)
 		else if (rc == -127)
 		{
 //			work.data[19] = max_nonce;
-			work_done = 1;
+//			if (work_restart[thr_id].restart)
+//				work_done = 1;
 			continue;
 		}
 		else if (rc == -128)
@@ -2524,9 +2528,11 @@ static void *miner_thread(void *userdata)
 				gpulog(LOG_DEBUG, thr_id, "ends=%08x range=%08x", nonceptr[0], (nonceptr[0] - start_nonce));
 			}
 			// prevent low scan ranges on next loop on fast algos (blake)
-			if (nonceptr[0] > UINT32_MAX - 64)
+			if (nonceptr[0] > UINT32_MAX - (64)) // 64
 				nonceptr[0] = UINT32_MAX;
-			work_done = 1;
+			if (work_restart[thr_id].restart)
+				work_done = 1;
+			continue;
 		}
 
 		// only required to debug purpose
@@ -2579,7 +2585,7 @@ static void *miner_thread(void *userdata)
 				work_done = 1;
 				continue;
 			}
-			if (max_nonce - work.scanned_to < (1 << 21))
+			if (max_nonce - work.scanned_to < (2 << 21))
 				work_done = 1;
 			if (!submit_work(mythr, &work))
 				break;
