@@ -38,7 +38,9 @@ __global__ __launch_bounds__(TPB, THF)
 //const uint32_t startNounce, 
 void quark_groestl512_gpu_hash_64_quad_a1_min3r(const uint32_t threads, uint4* g_hash, int *order)
 {
+#ifdef A1MIN3R_MOD
 	if (*order) { return; }
+#endif
 
 #if __CUDA_ARCH__ >= 300
 	// BEWARE : 4-WAY CODE (one hash need 4 threads)

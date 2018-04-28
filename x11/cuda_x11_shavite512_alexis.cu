@@ -188,7 +188,9 @@ static void round_4_8_12(const uint32_t sharedMemory[4][256], uint32_t* r, uint4
 __global__ __launch_bounds__(TPB,2) /* 64 registers with 128,8 - 72 regs with 128,7 */
 void x11_shavite512_gpu_hash_64_alexis(const uint32_t threads, uint64_t *g_hash, int *order)
 {
+#ifdef A1MIN3R_MOD
 	if (*order) { return; }
+#endif
 	__shared__ uint32_t sharedMemory[4][256];
 
 	aes_gpu_init_mt_256(sharedMemory);

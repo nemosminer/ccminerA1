@@ -469,7 +469,9 @@ __launch_bounds__(TPB50, 5)
 #endif
 void quark_skein512_gpu_hash_64(const uint32_t threads, uint64_t* __restrict__ g_hash, int *order)
 {
+#ifdef A1MIN3R_MOD
 	if (*order) { return; }
+#endif
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	if (thread < threads){

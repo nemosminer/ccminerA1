@@ -92,7 +92,9 @@ __launch_bounds__(256, 1)
 #endif
 void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint2* g_hash, int *order)
 {
+#ifdef A1MIN3R_MOD
 	if (*order) { return; }
+#endif
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	if (thread < threads)

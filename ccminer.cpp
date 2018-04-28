@@ -1860,7 +1860,8 @@ void restart_threads(void)
 			work_restart[i].restart = 1;
 			if (init_items[i])
 			{
-				ark_switch(i);
+				if (stratum.job.clean)
+					ark_switch(i);
 				check++;
 			}
 		}
@@ -1871,10 +1872,14 @@ void restart_threads(void)
 		pthread_mutex_unlock(&ark_lock);
 		break;
 	case 1:
-		for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
+		if (stratum.job.clean) for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
 		{
 			work_restart[i].restart = 1;
 			ark_switch(i);
+		}
+		else for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
+		{
+			work_restart[i].restart = 1;
 		}
 		break;
 	}

@@ -279,7 +279,9 @@ __global__
 //__launch_bounds__(256,2)
 void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, int *order)
 {
+#ifdef A1MIN3R_MOD
 	if (*order) { return; }
+#endif
 
 	uint32_t x[8][4] = { /* init */
 		{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },

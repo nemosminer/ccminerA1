@@ -92,7 +92,9 @@ __global__
 /*__launch_bounds__(256, 4)*/
 void x17_sha512_gpu_hash_64(const uint32_t threads, uint64_t *g_hash, int *order)
 {
-	if (*order) { return; }
+#ifdef A1MIN3R_MOD
+//	if (*order) { return; }
+#endif
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{

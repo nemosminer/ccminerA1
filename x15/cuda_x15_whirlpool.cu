@@ -626,7 +626,9 @@ __global__
 __launch_bounds__(TPB64,2)
 void x15_whirlpool_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
 {
+#ifdef A1MIN3R_MOD
 	if (*order) { return; }
+#endif
 	__shared__ uint2 sharedMemory[7][256];
 
 	if (threadIdx.x < 256) {

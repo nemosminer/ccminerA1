@@ -118,7 +118,9 @@ void quark_blake512_compress(uint64_t *h, const uint64_t *block, const uint8_t (
 __global__ __launch_bounds__(256, 4)
 void quark_blake512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
 {
+#ifdef A1MIN3R_MOD
 	if (*order) { return; }
+#endif
 #if !defined(SP_KERNEL) || __CUDA_ARCH__ < 500
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
