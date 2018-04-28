@@ -1872,16 +1872,25 @@ void restart_threads(void)
 		pthread_mutex_unlock(&ark_lock);
 		break;
 	case 1:
-		if (stratum.job.clean) for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
+#ifdef A1MIN3R_MOD
+//		if (stratum.job.clean) for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
+		for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
 		{
 			work_restart[i].restart = 1;
 			ark_switch(i);
 		}
-		else for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
+//		else for (int i = 0; i < opt_n_threads; i++)
+		{
+//			work_restart[i].restart = 1;
+		}
+		break;
+#else
+		for (int i = 0; i < opt_n_threads; i++)
 		{
 			work_restart[i].restart = 1;
 		}
 		break;
+#endif
 	}
 #endif
 }
