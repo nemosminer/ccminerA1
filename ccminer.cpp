@@ -1792,13 +1792,14 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 }
 
 __host__ extern void ark_switch(int thr_id);
+static int state = 0;
 
 void restart_threads(void)
 {
 	if (opt_debug && !opt_quiet)
 		applog(LOG_DEBUG, "%s", __FUNCTION__);
 	// restart mining thread IRL
-#if 1
+#if 0
 //	pthread_mutex_lock(&ark_lock);
 	if (stratum.job.clean) 
 	{
@@ -1816,7 +1817,7 @@ void restart_threads(void)
 			if (!work_restart[i].restart)
 				work_restart[i].restart = 1;
 	}
-#elif 1
+#elif 0
 	pthread_mutex_lock(&ark_lock);
 	for (int i = 0; i < opt_n_threads && work_restart; i++)
 	{
@@ -1848,10 +1849,34 @@ void restart_threads(void)
 			}
 		}
 		else */
-	for (int i = 0; i < opt_n_threads && work_restart; i++) if (!work_restart[i].restart)
+	int check;
+	switch (state)
 	{
-		work_restart[i].restart = 1;
-		ark_switch(i);
+	case 0:
+		check = 0;
+		pthread_mutex_lock(&ark_lock);
+		for (int i = 0; i < opt_n_threads && work_restart; i++) if (!work_restart[i].restart)
+		{
+			work_restart[i].restart = 1;
+			if (init_items[i])
+			{
+				ark_switch(i);
+				check++;
+			}
+		}
+		if (check == opt_n_threads)
+		{
+			state = 1;
+		}
+		pthread_mutex_unlock(&ark_lock);
+		break;
+	case 1:
+		for (int i = 0; i < opt_n_threads; i++) if (!work_restart[i].restart)
+		{
+			work_restart[i].restart = 1;
+			ark_switch(i);
+		}
+		break;
 	}
 #endif
 }
@@ -2392,192 +2417,6 @@ static void *miner_thread(void *userdata)
 
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
-#if 0
-		case ALGO_BASTION:
-			rc = scanhash_bastion(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_BLAKECOIN:
-			rc = scanhash_blake256(thr_id, &work, max_nonce, &hashes_done, 8);
-			break;
-		case ALGO_BLAKE:
-			rc = scanhash_blake256(thr_id, &work, max_nonce, &hashes_done, 14);
-			break;
-		case ALGO_BLAKE2S:
-			rc = scanhash_blake2s(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_BMW:
-			rc = scanhash_bmw(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_C11:
-			rc = scanhash_c11(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_CRYPTOLIGHT:
-			rc = scanhash_cryptolight(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_CRYPTONIGHT:
-			rc = scanhash_cryptonight(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_DECRED:
-			rc = scanhash_decred(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_DEEP:
-			rc = scanhash_deep(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_EQUIHASH:
-			rc = scanhash_equihash(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_FRESH:
-			rc = scanhash_fresh(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_FUGUE256:
-			rc = scanhash_fugue256(thr_id, &work, max_nonce, &hashes_done);
-			break;
-
-		case ALGO_GROESTL:
-		case ALGO_DMD_GR:
-			rc = scanhash_groestlcoin(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_MYR_GR:
-			rc = scanhash_myriad(thr_id, &work, max_nonce, &hashes_done);
-			break;
-
-		case ALGO_HMQ1725:
-			rc = scanhash_hmq17(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_HSR:
-			rc = scanhash_hsr(thr_id, &work, max_nonce, &hashes_done);
-			break;
-#ifdef WITH_HEAVY_ALGO
-		case ALGO_HEAVY:
-			rc = scanhash_heavy(thr_id, &work, max_nonce, &hashes_done, work.maxvote, HEAVYCOIN_BLKHDR_SZ);
-			break;
-		case ALGO_MJOLLNIR:
-			rc = scanhash_heavy(thr_id, &work, max_nonce, &hashes_done, 0, MNR_BLKHDR_SZ);
-			break;
-#endif
-		case ALGO_KECCAK:
-		case ALGO_KECCAKC:
-			rc = scanhash_keccak256(thr_id, &work, max_nonce, &hashes_done);
-			break;
-
-		case ALGO_JACKPOT:
-			rc = scanhash_jackpot(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_JHA:
-			rc = scanhash_jha(thr_id, &work, max_nonce, &hashes_done);
-			break;
-
-		case ALGO_LBRY:
-			rc = scanhash_lbry(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_LUFFA:
-			rc = scanhash_luffa(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_QUARK:
-			rc = scanhash_quark(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_QUBIT:
-			rc = scanhash_qubit(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_LYRA2:
-			rc = scanhash_lyra2(thr_id, &work, max_nonce, &hashes_done);
-			break;
-
-		case ALGO_LYRA2v2:
-			rc = scanhash_lyra2v2(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_LYRA2Z:
-			rc = scanhash_lyra2Z(thr_id, &work, max_nonce, &hashes_done);
-			break;
-
-		case ALGO_NEOSCRYPT:
-			rc = scanhash_neoscrypt(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_NIST5:
-			rc = scanhash_nist5(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_PENTABLAKE:
-			rc = scanhash_pentablake(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_PHI:
-			rc = scanhash_phi(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_POLYTIMOS:
-			rc = scanhash_polytimos(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_SCRYPT:
-			rc = scanhash_scrypt(thr_id, &work, max_nonce, &hashes_done,
-				NULL, &tv_start, &tv_end);
-			break;
-		case ALGO_SCRYPT_JANE:
-			rc = scanhash_scrypt_jane(thr_id, &work, max_nonce, &hashes_done,
-				NULL, &tv_start, &tv_end);
-			break;
-		case ALGO_SKEIN:
-			rc = scanhash_skeincoin(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_SKEIN2:
-			rc = scanhash_skein2(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_SKUNK:
-			rc = scanhash_skunk(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_SHA256D:
-			rc = scanhash_sha256d(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_SHA256T:
-			rc = scanhash_sha256t(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_SIA:
-			rc = scanhash_sia(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_SIB:
-			rc = scanhash_sib(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_S3:
-			rc = scanhash_s3(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_VANILLA:
-			rc = scanhash_vanilla(thr_id, &work, max_nonce, &hashes_done, 8);
-			break;
-		case ALGO_VELTOR:
-			rc = scanhash_veltor(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_WHIRLCOIN:
-		case ALGO_WHIRLPOOL:
-			rc = scanhash_whirl(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		//case ALGO_WHIRLPOOLX:
-		//	rc = scanhash_whirlx(thr_id, &work, max_nonce, &hashes_done);
-		//	break;
-		case ALGO_WILDKECCAK:
-			rc = scanhash_wildkeccak(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_TIMETRAVEL:
-			rc = scanhash_timetravel(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_TRIBUS:
-			rc = scanhash_tribus(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_BITCORE:
-			rc = scanhash_bitcore(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_X11EVO:
-			rc = scanhash_x11evo(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_X11:
-			rc = scanhash_x11(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_X13:
-			rc = scanhash_x13(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_X14:
-			rc = scanhash_x14(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_X15:
-			rc = scanhash_x15(thr_id, &work, max_nonce, &hashes_done);
-			break;
-#endif
 		case ALGO_X16R:
 //			try{
 
@@ -2597,14 +2436,6 @@ static void *miner_thread(void *userdata)
 				continue;
 			}	*/
 			break;
-#if 0
-		case ALGO_X17:
-			rc = scanhash_x17(thr_id, &work, max_nonce, &hashes_done);
-			break;
-		case ALGO_ZR5:
-			rc = scanhash_zr5(thr_id, &work, max_nonce, &hashes_done);
-			break;
-#endif
 		default:
 			/* should never happen */
 			goto out;
@@ -2681,6 +2512,7 @@ static void *miner_thread(void *userdata)
 			// prevent low scan ranges on next loop on fast algos (blake)
 			if (nonceptr[0] > UINT32_MAX - 64)
 				nonceptr[0] = UINT32_MAX;
+			work_done = 1;
 		}
 
 		// only required to debug purpose
@@ -2729,7 +2561,12 @@ static void *miner_thread(void *userdata)
 			work.submit_nonce_id = 0;
 			nonceptr[0] = work.nonces[0];
 			if (work_restart[thr_id].restart)
+			{
+				work_done = 1;
 				continue;
+			}
+			if (max_nonce - work.scanned_to < (1 << 21))
+				work_done = 1;
 			if (!submit_work(mythr, &work))
 				break;
 			nonceptr[0] = curnonce;
@@ -2754,16 +2591,14 @@ static void *miner_thread(void *userdata)
 					work.data[22] = 0;
 				}
 #endif
-				if (work_restart[thr_id].restart)
-					continue;
 				if (!submit_work(mythr, &work))
 					break;
 				nonceptr[0] = curnonce;
 				work.nonces[1] = 0; // reset
 			}
 		}
-		else
-			work_done = 1;
+//		else
+//			work_done = 1;
 
 	}
 	

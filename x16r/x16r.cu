@@ -416,6 +416,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 	return -128;
 }
 
+static uint64_t tlast[MAX_GPUS] = { 0 };
 extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21) + BOOST;
@@ -423,7 +424,6 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	const int dev_id = device_map[thr_id];
-	static uint64_t tlast = 0;
 //	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 20 : 19;
 //	if (strstr(device_name[dev_id], "GTX 1080")) intensity = 20;
 //	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21);
@@ -451,15 +451,17 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	uint32_t ntime = swab32(pdata[17]);
 	if (s_ntime != ntime) {
 		s_ntime = ntime;
-		if (!tlast || tlast != (*(uint64_t*)&endiandata[1]))
+		if (!tlast[thr_id] || tlast[thr_id] != (*(uint64_t*)&endiandata[1]))
 			if (!thr_id) applog(LOG_INFO, "hash order %X%X (%08x)", endiandata[2], endiandata[1], ntime);
 	}
 
 	uint8_t algo80;
 
 	cuda_check_cpu_setTarget(ptarget, thr_id);
-	if (!tlast || tlast != (*(uint64_t*)&endiandata[1]))
-		tlast = (*(uint64_t*)&endiandata[1]);
+	if (!tlast[thr_id] || tlast[thr_id] != (*(uint64_t*)&endiandata[1]))
+		tlast[thr_id] = (*(uint64_t*)&endiandata[1]);
+	if (throughput < (1 << 10))
+		return -127;
 
 	algo80 = (*(uint64_t*)&endiandata[1] >> 60) & 0x0f;
 	switch (algo80) {
@@ -601,9 +603,11 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				applog(LOG_INFO, "K80: %s", oks80);
 				applog(LOG_ERR,  "F80: %s", fails);
 #endif
-				ark_reset(thr_id);
+				if (*h_ark[thr_id]) {
+					ark_reset(thr_id);
+					return -127;
+				}
 				//				if (work_restart[thr_id].restart) return -127;
-				if (*h_ark[thr_id]) return -127;
 				return work->valid_nonces;
 			}
 			else if (vhash[7] > Htarg) {
@@ -641,9 +645,11 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart && *h_ark[thr_id] == 0);
 
 	*hashes_done = pdata[19] - first_nonce;
-	ark_reset(thr_id);
-	if (*h_ark[thr_id]) return -127;
-		//	if (work_restart[thr_id].restart) return -127;
+	if (*h_ark[thr_id]) {
+		ark_reset(thr_id);
+		return -127;
+	}
+	//	if (work_restart[thr_id].restart) return -127;
 	return 0;
 }
 
@@ -711,24 +717,24 @@ __host__ void ark_switch(int thr_id)
 		cudaSetDevice(device_map[thr_id]);
 //		set_hi << <1, 1, 0, streamx[0]>> >(d_ark[thr_id]);
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[0]));
+		*h_ark[thr_id] = 1;
 		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamx[0]));
 	}
-	*h_ark[thr_id] = 1;
 }
 //CUDA_API_PER_THREAD_DEFAULT_STREAM
 __host__ void ark_reset(int thr_id)
 {
 //	cudaStreamSynchronize(streamk[thr_id]);
 //	pthread_mutex_lock(&ark_lock);
-	if (*h_ark[thr_id])
+//	if (*h_ark[thr_id]) //! Call needs check to avoid 
 	{
 
 //		pthread_mutex_unlock(&ark_lock);
 		//		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[thr_id]));
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[thr_id]));
+		*h_ark[thr_id] = 0;
 		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamx[0]));
 	}// else
-	*h_ark[thr_id] = 0;
 //		pthread_mutex_unlock(&ark_lock);
 //	CUDA_SAFE_CALL(cudaStreamSynchronize(streamx[thr_id]));
 }
