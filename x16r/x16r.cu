@@ -300,7 +300,7 @@ static bool init[MAX_GPUS] = { 0 };
 
 extern volatile int init_items[MAX_GPUS];
 volatile int *volatile h_ark[MAX_GPUS] = { NULL };
-extern "C" pthread_mutex_t ark_lock;
+extern pthread_mutex_t ark_lock;
 
 //#define _DEBUG
 #define _DEBUG_PREFIX "x16r-"
