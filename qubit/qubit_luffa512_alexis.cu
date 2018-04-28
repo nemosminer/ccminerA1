@@ -710,7 +710,7 @@ void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *or
 
 		*(uint2x4*)&hash[0] = __ldg4(&Hash[0]);
 		*(uint2x4*)&hash[8] = __ldg4(&Hash[1]);
-//		__syncthreads();
+		__syncthreads();
 		#pragma unroll 8
 		for(int i=0;i<8;i++){
 			statebuffer[i] = cuda_swab32(hash[i]);

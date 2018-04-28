@@ -213,7 +213,7 @@ void x11_shavite512_gpu_hash_64_alexis(const uint32_t threads, uint64_t *g_hash,
 		// fülle die Nachricht mit 64-byte (vorheriger Hash)
 		*(uint2x4*)&r[ 0] = __ldg4((uint2x4*)&Hash[ 0]);
 		*(uint2x4*)&r[ 8] = __ldg4((uint2x4*)&Hash[ 4]);
-//		__syncthreads();
+		__syncthreads();
 		
 		*(uint2x4*)&p[ 0] = *(uint2x4*)&state[ 0];
 		*(uint2x4*)&p[ 2] = *(uint2x4*)&state[ 8];

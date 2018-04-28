@@ -567,7 +567,7 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t
 		*(uint2x4*)&r[8] = *(uint2x4*)&c_PaddedMessage80[8];
 		*(uint4*)&r[16] = *(uint4*)&c_PaddedMessage80[16];
 
-//		__syncthreads();
+		__syncthreads();
 
 
 		r[19] = cuda_swab32(nounce);

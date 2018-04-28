@@ -192,7 +192,7 @@ void x13_hamsi512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *or
 		uint8_t h1[64];
 		*(uint2x4*)&h1[ 0] = *(uint2x4*)&Hash[0];
 		*(uint2x4*)&h1[32] = *(uint2x4*)&Hash[8];
-//		__syncthreads();
+		__syncthreads();
 		uint32_t c[16], h[16], m[16];
 		*(uint16*)&c[ 0] = *(uint16*)&c_c[ 0];
 		*(uint16*)&h[ 0] = *(uint16*)&c_c[ 0];

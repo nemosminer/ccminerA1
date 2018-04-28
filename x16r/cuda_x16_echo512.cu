@@ -305,7 +305,7 @@ void x16_echo512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint64_t *g_
 
 //	echo_gpu_init(sharedMemory);
 	aes_gpu_init_128(sharedMemory);
-//	__threadfence_block();
+	__threadfence_block();
 #if 0
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)

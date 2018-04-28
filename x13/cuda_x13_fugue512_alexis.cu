@@ -280,7 +280,7 @@ void x13_fugue512_gpu_hash_64_alexis(uint32_t threads, uint64_t *g_hash, int *or
 		*(uint2x4*)&Hash[0] = swapvec(__ldg4((uint2x4*)&hash[0]));
 		*(uint2x4*)&Hash[8] = swapvec(__ldg4((uint2x4*)&hash[8]));
 */
-//		__syncthreads();
+		__syncthreads();
 		
 		S[ 0] = S[ 1] = S[ 2] = S[ 3] = S[ 4] = S[ 5] = S[ 6] = S[ 7] = S[ 8] = S[ 9] = S[10] = S[11] = S[12] = S[13] = S[14] = S[15] = S[16] = S[17] = S[18] = S[19] = 0;
 		*(uint2x4*)&S[20] = *(uint2x4*)&c_S[ 0];

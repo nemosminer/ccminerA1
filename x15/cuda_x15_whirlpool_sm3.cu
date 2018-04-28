@@ -2017,7 +2017,7 @@ void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce
 		#endif
 	}
 	//__threadfence_block(); // ensure shared mem is ready
-//	__syncthreads();
+	__syncthreads();
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -2126,7 +2126,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 		#pragma unroll 8
 		for (i=0; i<8; i++)
 			n[i] = hash[i] = g_hash[hashPosition + i];
-//		__syncthreads();
+		__syncthreads();
 //		#pragma unroll 10
 		for (i=0; i < 10; i++) {
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
