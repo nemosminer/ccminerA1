@@ -324,6 +324,54 @@ __global__ void set_lo(int *ark)
 	*ark = 0;
 }
 
+#define TOP_SPEED 0
+#define MID_SPEED 1
+#define LOW_SPEED 3
+#define MIN_SPEED 6
+#define SIMD_MAX (1 << 18)
+uint8_t target_table[16] =
+{
+	0,//TOP_SPEED,	//60
+	0,//TOP_SPEED,	//71
+	9,//MIN_SPEED,	//7.8
+	3,//MID_SPEED,	//24.7
+	0,//TOP_SPEED,	//66.00
+	0,//TOP_SPEED,	//71.5
+	1,//MID_SPEED,	//32.1
+	2,//LOW_SPEED,	//17
+	3,//LOW_SPEED,	//14.82
+	10,//MIN_SPEED,	//6.08
+	8,//LOW_SPEED,	//8.7
+	7,//LOW_SPEED,	//10.6
+	6,//LOW_SPEED,	//11.6
+	0,//TOP_SPEED,	//115
+	5,//LOW_SPEED,	//15.8
+	0//TOP_SPEED	//71
+};
+
+void target_throughput(uint64_t target, uint32_t &throughput)
+{
+	bool simd = 0;
+	uint32_t t = throughput;
+	uint32_t avg = target_table[(target >> 60) & 0x0f] << 1;
+	if (((target >> 60) & 0x0f) == SIMD)
+		simd = 1;
+	for (int i = 1; i < 16; i++)
+	{
+		avg += target_table[(target >> 60 - (i << 2)) & 0x0f];
+		if (((target >> 60 - (i << 2)) & 0x0f) == SIMD)
+			simd = 1;
+	}
+	applog(LOG_DEBUG, "%d >> 4 = %d", avg, avg >> 4);
+	throughput >>= (avg >> 4);
+	throughput += 1 << (avg & 0xf);
+	throughput += throughput & 0xfff;
+	throughput &= ~0xfff;
+	throughput = (t < throughput) ? t : throughput;
+	throughput = (simd) ? (throughput >(SIMD_MAX)) ? SIMD_MAX : throughput : throughput;
+	throughput = (throughput) ? throughput : 0x1000;
+}
+
 extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 {
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21) + BOOST;
@@ -365,8 +413,9 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 
 		//		ark_init(thr_id);
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput - BOOST), throughput - BOOST);
+#if 0
 		if (throughput2intensity(throughput - BOOST) > 21) gpulog(LOG_INFO, thr_id, "SIMD throws error on malloc call, TBD if there is a fix");
-
+#endif
 		/*
 		BLAKE = 0,
 		BMW,1
@@ -393,7 +442,15 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		quark_keccak512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
 		//		x11_shavite512_cpu_init(thr_id, throughput);
-		if (x11_simd512_cpu_init(thr_id, throughput))
+		if (throughput > (SIMD_MAX))
+		{
+			if (x11_simd512_cpu_init(thr_id, SIMD_MAX))
+			{
+				applog(LOG_WARNING, "SIMD was unable to initialize :( exiting...");
+				exit(-1);
+			}// 64
+		}
+		else if (x11_simd512_cpu_init(thr_id, throughput))
 		{
 			applog(LOG_WARNING, "SIMD was unable to initialize :( exiting...");
 			exit(-1);
@@ -418,7 +475,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 extern volatile time_t g_work_time;
 
 static uint64_t tlast[MAX_GPUS] = { 0 };
-extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, uint64_t seq)
 {
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21) + BOOST;
 	uint32_t *pdata = work->data;
@@ -438,6 +495,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	if (throughput >= ((max_nonce - first_nonce) >> 1))
 	{
 		*hashes_done = pdata[19] - first_nonce + throughput;
+		// TODO quit lying about those hashes getting computed.
 		return 0; // free hashes
 	}
 	uint32_t _ALIGN(64) endiandata[20];
@@ -449,11 +507,12 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		((uint32_t*)pdata)[2] = 0x88888888;
 		//! Should cause vanila v0.1 code to have shavite CPU invalid hash error at various intervals
 		*/
-
 		((uint32_t*)ptarget)[7] = 0x003f;
-		*((uint64_t*)&pdata[1]) = 0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
+		*((uint64_t*)&pdata[1]) = seq;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
 //		*((uint64_t*)&pdata[1]) = 0xbbbbbbbbbbbbbbbb;//2:64,4:80,8,a,e.. error//44B54B9F248C0708//0x31C8B76F520AEDF4;
 		//489f 4f38 33f4 7016 //01346789f
+		((uint32_t*)pdata)[17] = 0x12345678;
+
 
 	}
 
@@ -539,13 +598,13 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		x16_sha512_setBlock_80(thr_id, endiandata);
 		break;
 	}
-
+	target_throughput(*(uint64_t*)&endiandata[1], throughput);
 //	work->nonces[0] = UINT32_MAX;
 	int warn = 0;
 
 	do {
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id]);
-		//		cudaStreamSynchronize(streamx[0]);
+//		cudaStreamSynchronize(streamx[0]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (3 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
@@ -625,14 +684,16 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 					return -127;
 				gpu_increment_reject(thr_id);
 				algo80_fails[algo80]++;
+				if (!opt_quiet)	gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU! %s %X%X",
+					work->nonces[0], algo_strings[algo80], endiandata[2], endiandata[1]);
 				if (!warn) {
 					warn++;
 					pdata[19] = work->nonces[0] + 1;
 					continue;
 				}
 				else {
-					if (!opt_quiet)	gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU! %s %X%X",
-						work->nonces[0], algo_strings[algo80], endiandata[2], endiandata[1]);
+//					if (!opt_quiet)	gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU! %s %X%X",
+//						work->nonces[0], algo_strings[algo80], endiandata[2], endiandata[1]);
 					//					work->nonces[0], algo_strings[algo80], hashOrder);
 					warn = 0;
 					//					work->data[19] = max_nonce;

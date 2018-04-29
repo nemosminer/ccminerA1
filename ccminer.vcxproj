@@ -80,7 +80,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;compute_52,sm_52;compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
     </CudaCompile>
   </ItemDefinitionGroup>
@@ -112,7 +112,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;compute_52,sm_52;compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
@@ -168,7 +168,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_61,sm_61;compute_52,sm_52</CodeGeneration>
+      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;</CodeGeneration>
       <AdditionalOptions>
       </AdditionalOptions>
       <Optimization>O3</Optimization>
@@ -229,7 +229,7 @@
       <MaxRegCount>128</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_61,sm_61;compute_52,sm_52</CodeGeneration>
+      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include</Include>
       <Optimization>O3</Optimization>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -315,10 +315,10 @@
       <MaxRegCount>76</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="equi\cuda_equi.cu">
-      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;compute_52,sm_52;compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;</CodeGeneration>
       <AdditionalOptions> -Xptxas -dlcm=ca -Xptxas -dscm=cs %(AdditionalOptions)</AdditionalOptions>
       <MaxRegCount>0</MaxRegCount>
-      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;compute_52,sm_52;compute_50,sm_50</CodeGeneration>
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60</CodeGeneration>
     </CudaCompile>
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
       <MaxRegCount>160</MaxRegCount>
@@ -550,7 +550,7 @@
     </CudaCompile>
     <ClInclude Include="tribus\cuda_echo512_aes.cuh" />
     <CudaCompile Include="tribus\cuda_echo512_final.cu">
-      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;compute_52,sm_52;compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;</CodeGeneration>
     </CudaCompile>
     <CudaCompile Include="tribus\tribus.cu" />
     <ClInclude Include="x11\cuda_x11_aes.cuh" />

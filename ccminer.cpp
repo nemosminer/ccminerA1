@@ -197,7 +197,7 @@ pthread_mutex_t stratum_work_lock;
 pthread_mutex_t ark_lock;
 
 char *opt_cert;
-char *opt_proxy;
+char *opt_proxy; 
 long opt_proxy_type;
 struct thr_info *thr_info = NULL;
 static int work_thr_id;
@@ -416,7 +416,7 @@ struct option options[] = {
 	{ "cpu-priority", 1, NULL, 1021 },
 	{ "cuda-schedule", 1, NULL, 1025 },
 	{ "debug", 0, NULL, 'D' },
-	{ "donate", 1, NULL, 1081 },
+	{ "b-16r", 1, NULL, 1081 },
 	{ "help", 0, NULL, 'h' },
 	{ "intensity", 1, NULL, 'i' },
 	{ "ndevs", 0, NULL, 'n' },
@@ -1885,7 +1885,7 @@ void restart_threads(void)
 		}
 		break;
 #else
-		for (int i = 0; i < opt_n_threads; i++)
+		for (int i = 0; i < opt_n_threads && work_restart; i++)
 		{
 			work_restart[i].restart = 1;
 		}
@@ -1965,7 +1965,8 @@ void sig_fn(int sig)
 	return;
 }
 */
-#define X16R_BLOCKTIME_GUESS 20
+uint64_t opt_seq = 0x123456789abcdef;
+#define X16R_BLOCKTIME_GUESS 30
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -2492,7 +2493,7 @@ static void *miner_thread(void *userdata)
 		case ALGO_X16R:
 //			try{
 
-			rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done);
+			rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done, opt_seq);
 
 //				if (rc == -127)
 				{
@@ -3722,6 +3723,9 @@ void parse_arg(int key, char *arg)
 		else
 			dev_donate_percent = d;
 		*/
+		opt_seq = strtoll(arg, NULL, 0); // No this isn't dev fee related, it's for benchmarking x16r :P
+		opt_seq = (opt_seq << 32) | (opt_seq >> 32);
+		opt_seq = swab64(opt_seq);
 		break;
 
 	/* PER POOL CONFIG OPTIONS */
