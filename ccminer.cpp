@@ -2150,6 +2150,7 @@ static void *miner_thread(void *userdata)
 		} 
 		else if (have_stratum)
 		{
+			asm("UD2")
 //			gpulog(LOG_BLUE, thr_id, "REGEN");
 //			if (stratum_gen_work(&stratum, &g_work))
 			if (strncmp(work.job_id, g_work.job_id, 128))
