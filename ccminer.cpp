@@ -2148,10 +2148,11 @@ static void *miner_thread(void *userdata)
 //			gpulog(LOG_NOTICE, thr_id, "job update");
 			//nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 		} 
-		else if (!regen && have_stratum && rc == -127)
+		else if (have_stratum)
 		{
 //			gpulog(LOG_BLUE, thr_id, "REGEN");
 //			if (stratum_gen_work(&stratum, &g_work))
+			if (strncmp(work.job_id, g_work.job_id, 128))
 			{
 //				g_work_time = time(NULL);
 				stratum.job.shares_count = 0;
@@ -2578,7 +2579,7 @@ static void *miner_thread(void *userdata)
 		{
 //			work.data[19] = max_nonce;
 //			if (work_restart[thr_id].restart)
-			work_done = 1;
+//			work_done = 1;
 //			gpulog(LOG_NOTICE, thr_id, "Restart thread");
 			continue;
 		}
@@ -2655,7 +2656,7 @@ static void *miner_thread(void *userdata)
 			}
 			*/
 //			if (max_nonce - work.scanned_to < (3 << 21))
-				work_done = 1;
+//				work_done = 1;
 			if (!submit_work(mythr, &work))
 				break;
 			nonceptr[0] = curnonce;
