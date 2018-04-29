@@ -1,4 +1,4 @@
-AC_INIT([a1_min3r], [0.1.1], [], [a1_min3r], [a1i3nj03@users.noreply.github.com])
+AC_INIT([a1min3r], [0.1.4], [], [a1min3r], [a1i3nj03@users.noreply.github.com])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM

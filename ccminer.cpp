@@ -2494,6 +2494,15 @@ static void *miner_thread(void *userdata)
 //			try{
 
 			rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done, opt_seq);
+			if (rc == -128)
+			{
+				if (opt_time_limit > 0)
+				{
+					rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done, -1);
+				}
+				else
+					rc = scanhash_x16r(thr_id, &work, end_nonce, &hashes_done, opt_seq);
+			}
 
 //				if (rc == -127)
 				{
@@ -2551,9 +2560,7 @@ static void *miner_thread(void *userdata)
 //			double rate_factor = 1.0;
 
 			/* store thread hashrate */
-			if (dtime < 0.025)
-				thr_hashrates[thr_id] = hashes_done << 6;
-			else if (dtime > 0.0) {
+			if (dtime > 0.0) {
 				pthread_mutex_lock(&stats_lock);
 				thr_hashrates[thr_id] = hashes_done / dtime;
 //				thr_hashrates[thr_id] *= rate_factor;
@@ -2571,15 +2578,15 @@ static void *miner_thread(void *userdata)
 		{
 //			work.data[19] = max_nonce;
 //			if (work_restart[thr_id].restart)
-//				work_done = 1;
+			work_done = 1;
 //			gpulog(LOG_NOTICE, thr_id, "Restart thread");
 			continue;
 		}
 		else if (rc == -128)
 		{
-			work.data[19] = max_nonce;
-			usleep(100);
-
+//			work.data[19] = max_nonce;
+//			usleep(100);
+			continue;
 		}
 		else {
 			work.scanned_to = max_nonce;
@@ -2647,7 +2654,7 @@ static void *miner_thread(void *userdata)
 				continue;
 			}
 			*/
-			if (max_nonce - work.scanned_to < (3 << 21))
+//			if (max_nonce - work.scanned_to < (3 << 21))
 				work_done = 1;
 			if (!submit_work(mythr, &work))
 				break;
@@ -3928,6 +3935,7 @@ int main(int argc, char *argv[])
 	parse_single_opt('q', argc, argv);
 
 	printf("*** a1i3n-min3r " PACKAGE_VERSION " for nVidia GPUs by a1i3nj03@users.noreply.github.com ***\n"
+#if 0
 		"                         ;;;;;;iiiii;;                          \n"
 		"                 i!!!!!!!!!!!!!!!~{:!!!!i\n"
 		"             i!~!!))!!!!!!!!!!!!!!!!!!!!!!!!\n"
@@ -3969,6 +3977,9 @@ int main(int argc, char *argv[])
 		"                    `!!!!!!!!!!!!!!'\n"
 		"                      `\\!!!!!!!!!~\n"
 		"(Credit to http://www.asciiworld.com/-Aliens,128-.html )\n");
+#else
+		);
+#endif
 	if (!opt_quiet) {
 		const char* arch = is_x64() ? "64-bits" : "32-bits";
 #ifdef _MSC_VER
@@ -3977,8 +3988,8 @@ int main(int argc, char *argv[])
 		printf("    Built with the nVidia CUDA Toolkit %d.%d %s\n\n",
 #endif
 			CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10, arch);
-		printf("  Originally based on Christian Buchner and Christian H. project\n");
-		printf("  Include some kernels from alexis78, djm34, djEzo, tsiv and krnlx.\n\n");
+		printf("  Originally based on Christian Buchner and Christian H. project\n"
+				"  Include some kernels from alexis78, djm34, djEzo, tsiv and krnlx.\n\n");
 	}
 
 	rpc_user = strdup("");

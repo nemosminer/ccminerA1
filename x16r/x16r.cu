@@ -328,24 +328,24 @@ __global__ void set_lo(int *ark)
 #define MID_SPEED 1
 #define LOW_SPEED 3
 #define MIN_SPEED 6
-#define SIMD_MAX (1 << 18)
+#define SIMD_MAX (1 << 19)
 uint8_t target_table[16] =
 {
 	0,//TOP_SPEED,	//60
 	0,//TOP_SPEED,	//71
-	9,//MIN_SPEED,	//7.8
-	3,//MID_SPEED,	//24.7
+	6,//MIN_SPEED,	//7.8
+	2,//MID_SPEED,	//24.7
 	0,//TOP_SPEED,	//66.00
 	0,//TOP_SPEED,	//71.5
 	1,//MID_SPEED,	//32.1
 	2,//LOW_SPEED,	//17
 	3,//LOW_SPEED,	//14.82
-	10,//MIN_SPEED,	//6.08
-	8,//LOW_SPEED,	//8.7
-	7,//LOW_SPEED,	//10.6
-	6,//LOW_SPEED,	//11.6
+	6,//MIN_SPEED,	//6.08
+	5,//LOW_SPEED,	//8.7
+	5,//LOW_SPEED,	//10.6
+	5,//LOW_SPEED,	//11.6
 	0,//TOP_SPEED,	//115
-	5,//LOW_SPEED,	//15.8
+	2,//LOW_SPEED,	//15.8
 	0//TOP_SPEED	//71
 };
 
@@ -362,7 +362,7 @@ void target_throughput(uint64_t target, uint32_t &throughput)
 		if (((target >> 60 - (i << 2)) & 0x0f) == SIMD)
 			simd = 1;
 	}
-	applog(LOG_DEBUG, "%d >> 4 = %d", avg, avg >> 4);
+//	applog(LOG_DEBUG, "%d >> 4 = %d", avg, avg >> 4);
 	throughput >>= (avg >> 4);
 	throughput += 1 << (avg & 0xf);
 	throughput += throughput & 0xfff;
@@ -484,8 +484,9 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	const int dev_id = device_map[thr_id];
 	if (pdata[19] == max_nonce)
 	{
-		*hashes_done = pdata[19] - first_nonce + throughput;
-		return -127;
+		if (seq == -1)
+			*hashes_done = pdata[19] - first_nonce + throughput;
+		return -128;
 	}
 	//	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 20 : 19;
 	//	if (strstr(device_name[dev_id], "GTX 1080")) intensity = 20;
@@ -494,9 +495,10 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	throughput = min(throughput, max_nonce - first_nonce);
 	if (throughput >= ((max_nonce - first_nonce) >> 1))
 	{
-		*hashes_done = pdata[19] - first_nonce + throughput;
+		if (seq == -1)
+			*hashes_done = pdata[19] - first_nonce + throughput;
 		// TODO quit lying about those hashes getting computed.
-		return 0; // free hashes
+		return -128; // free hashes
 	}
 	uint32_t _ALIGN(64) endiandata[20];
 
