@@ -148,7 +148,7 @@ static void echo_round(uint32_t* const sharedMemory, uint32_t *W, uint32_t &k0)
 }
 
 __device__ __forceinline__
-void cuda_echo_round_80_a1_min3r(uint32_t *const __restrict__ sharedMemory, const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash)
+void cuda_echo_round_80_a1_min3r(uint32_t *const __restrict__ sharedMemory, const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash, volatile int *volatile order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t k0; // bitlen
@@ -197,7 +197,12 @@ void cuda_echo_round_80_a1_min3r(uint32_t *const __restrict__ sharedMemory, cons
 #pragma unroll
 		for (int i = 61; i < 64; i++) W[i] = 0;
 
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < 5; i++)
+			echo_round(sharedMemory, W, k0);
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
+		for (int i = 0; i < 5; i++)
 			echo_round(sharedMemory, W, k0);
 
 #pragma unroll 4
@@ -299,7 +304,7 @@ void x16_echo512_setBlock_80(int thr_id, void *endiandata)
 }
 
 __global__ __launch_bounds__(128, 7) /* will force 72 registers */
-void x16_echo512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint64_t *g_hash)
+void x16_echo512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint64_t *g_hash, int *order)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -318,18 +323,18 @@ void x16_echo512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint64_t *g_
 	}
 #else
 	//		cuda_echo_round_80(sharedMemory, c_PaddedMessage80, startNonce + thread, pHash);
-	cuda_echo_round_80_a1_min3r(sharedMemory, threads, startNonce, g_hash);
+	cuda_echo_round_80_a1_min3r(sharedMemory, threads, startNonce, g_hash, order);
 #endif
 }
 
 __host__
-void x16_echo512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash)
+void x16_echo512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x16_echo512_gpu_hash_80 << <grid, block>> >(threads, startNonce, (uint64_t*)d_hash);
+	x16_echo512_gpu_hash_80 << <grid, block>> >(threads, startNonce, (uint64_t*)d_hash, order);
 //	x16_echo512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> >(threads, startNonce, (uint64_t*)d_hash);
 }

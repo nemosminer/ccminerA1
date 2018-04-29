@@ -236,7 +236,7 @@ void x16_sha512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, u
 }
 
 __host__
-void x16_sha512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+void x16_sha512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 256;
 

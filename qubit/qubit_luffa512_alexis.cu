@@ -623,7 +623,7 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 
 
 __global__ __launch_bounds__(256, 4)
-void qubit_luffa512_gpu_hash_80_alexis(const uint32_t threads,const uint32_t startNounce, uint32_t *outputHash)
+void qubit_luffa512_gpu_hash_80_alexis(const uint32_t threads,const uint32_t startNounce, uint32_t *outputHash, int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -657,6 +657,10 @@ void qubit_luffa512_gpu_hash_80_alexis(const uint32_t threads,const uint32_t sta
 
 		qubit_rnd512_first(statebuffer, statechainv);
 
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
+
 		uint32_t *outHash = outputHash + (thread<<4);
 
 		rnd512_nullhash(statechainv);
@@ -670,14 +674,15 @@ void qubit_luffa512_gpu_hash_80_alexis(const uint32_t threads,const uint32_t sta
 }
 
 __host__
-void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash){
+void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int *order)
+{
 
 	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	qubit_luffa512_gpu_hash_80_alexis << <grid, block>> > (threads, startNounce, d_outputHash);
+	qubit_luffa512_gpu_hash_80_alexis << <grid, block>> > (threads, startNounce, d_outputHash, order);
 //	qubit_luffa512_gpu_hash_80_alexis << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, d_outputHash);
 }
 

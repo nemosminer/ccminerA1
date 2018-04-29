@@ -475,7 +475,7 @@ void jackpot_keccak512_cpu_setBlock(int thr_id, void *pdata, size_t inlen)
 }
 
 __global__
-void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
+void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, int *order)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -499,12 +499,14 @@ void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t
 
 		// den Block einmal gut durchschütteln
 		keccak_block(keccak_gpu_state, message, c_keccak_round_constants);
-
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
 		uint32_t hash[16];
 
 		#pragma unroll 8
 		for (size_t i = 0; i < 64; i += 8) {
-			U64TO32_LE((&hash[i/4]), keccak_gpu_state[i / 8]);
+			U64TO32_LE((&hash[i >> 2]), keccak_gpu_state[i >> 3]);
 		}
 
 		// copy hash
@@ -517,7 +519,7 @@ void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t
 }
 
 __host__
-void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order)
+void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 256;
 
@@ -526,7 +528,7 @@ void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNoun
 
 	size_t shared_size = 0;
 
-	jackpot_keccak512_gpu_hash << <grid, block, shared_size>> >(threads, startNounce, (uint64_t*)d_hash);
+	jackpot_keccak512_gpu_hash << <grid, block, shared_size>> >(threads, startNounce, (uint64_t*)d_hash, order);
 //	jackpot_keccak512_gpu_hash << <grid, block, shared_size, streamk[thr_id] >> >(threads, startNounce, (uint64_t*)d_hash);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }

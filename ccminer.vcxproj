@@ -28,7 +28,7 @@
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v120</PlatformToolset>
     <CLRSupport>false</CLRSupport>
-    <LinkIncremental>false</LinkIncremental>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -145,9 +145,11 @@
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <CompileAsWinRT>false</CompileAsWinRT>
-      <PreprocessKeepComments>true</PreprocessKeepComments>
+      <PreprocessKeepComments>false</PreprocessKeepComments>
       <StringPooling>true</StringPooling>
-      <ShowIncludes>true</ShowIncludes>
+      <ShowIncludes>false</ShowIncludes>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <PreprocessToFile>false</PreprocessToFile>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
@@ -162,19 +164,20 @@
       <LinkStatus>false</LinkStatus>
       <LargeAddressAware>true</LargeAddressAware>
       <PerUserRedirection>true</PerUserRedirection>
+      <SetChecksum>true</SetChecksum>
     </Link>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <AdditionalOptions>
       </AdditionalOptions>
       <Optimization>O3</Optimization>
       <AdditionalCompilerOptions>
       </AdditionalCompilerOptions>
-      <Defines>A1MIN3R_MOD</Defines>
+      <Defines>A1MIN3R_MOD;</Defines>
       <FastMath>true</FastMath>
     </CudaCompile>
     <CudaLink>
@@ -207,8 +210,11 @@
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
       <CompileAsWinRT>false</CompileAsWinRT>
-      <PreprocessKeepComments>true</PreprocessKeepComments>
-      <ShowIncludes>true</ShowIncludes>
+      <PreprocessKeepComments>false</PreprocessKeepComments>
+      <ShowIncludes>false</ShowIncludes>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <PreprocessToFile>false</PreprocessToFile>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
@@ -223,13 +229,14 @@
       <LargeAddressAware>true</LargeAddressAware>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <PerUserRedirection>true</PerUserRedirection>
+      <SetChecksum>true</SetChecksum>
     </Link>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>128</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_70,sm_70;compute_62,sm_62;compute_61,sm_61;compute_60,sm_60;</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include</Include>
       <Optimization>O3</Optimization>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -238,7 +245,7 @@
       <FastMath>true</FastMath>
       <AdditionalCompilerOptions>
       </AdditionalCompilerOptions>
-      <Defines>A1MIN3R_MOD</Defines>
+      <Defines>A1MIN3R_MOD;</Defines>
     </CudaCompile>
     <CudaLink>
       <Optimization>O3</Optimization>

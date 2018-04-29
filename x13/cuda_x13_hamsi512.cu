@@ -439,7 +439,7 @@ void x16_hamsi512_setBlock_80(int thr_id, void *pdata)
 }
 
 __global__
-void x16_hamsi512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash)
+void x16_hamsi512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash, int *order)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -514,6 +514,9 @@ void x16_hamsi512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce,
 		// close
 		uint8_t endtag[8] = { 0x80, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00 };
 		INPUT_BIG;
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
 
 		#pragma unroll
 		for (int r = 0; r < 6; r++) {
@@ -544,13 +547,13 @@ void x16_hamsi512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce,
 }
 
 __host__
-void x16_hamsi512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+void x16_hamsi512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	x16_hamsi512_gpu_hash_80 << <grid, block>> > (threads, startNounce, (uint64_t*)d_hash);
+	x16_hamsi512_gpu_hash_80 << <grid, block>> > (threads, startNounce, (uint64_t*)d_hash, order);
 //	x16_hamsi512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, (uint64_t*)d_hash);
 }

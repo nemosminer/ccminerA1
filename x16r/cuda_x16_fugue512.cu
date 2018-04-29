@@ -308,7 +308,7 @@ void x16_fugue512_setBlock_80(int thr_id, void *pdata)
 
 __global__
 __launch_bounds__(TPB)
-void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash)
+void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash, int *order)
 {
 	__shared__ uint32_t mixtabs[1024];
 
@@ -366,6 +366,9 @@ void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce,
 		FUGUE512_3((Data[15]), (Data[16]), (Data[17]));
 		FUGUE512_F((Data[18]), (Data[19]), 0/*bchi*/, (80*8)/*bclo*/);
 
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
 		// rotate right state by 3 dwords (S00 = S33, S03 = S00)
 		SUB_ROR3;
 		SUB_ROR9;
@@ -460,13 +463,13 @@ void x16_fugue512_cpu_free(int thr_id)
 }
 
 __host__
-void x16_fugue512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash)
+void x16_fugue512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = TPB;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x16_fugue512_gpu_hash_80 << <grid, block>> > (threads, startNonce, (uint64_t*)d_hash);
+	x16_fugue512_gpu_hash_80 << <grid, block>> > (threads, startNonce, (uint64_t*)d_hash, order);
 //	x16_fugue512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNonce, (uint64_t*)d_hash);
 }

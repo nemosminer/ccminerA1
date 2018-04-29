@@ -2000,7 +2000,7 @@ const int i0, const int i1, const int i2, const int i3, const int i4, const int 
 
 
 __global__
-void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, void *outputHash, int swab)
+void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, void *outputHash, int *order)
 {
 	__shared__ uint64_t sharedMemory[2048];
 
@@ -2025,7 +2025,7 @@ void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce
 		uint64_t n[8];
 		uint64_t h[8];
 		uint32_t nonce = startNounce + thread;
-		nonce = swab ? cuda_swab32(nonce) : nonce;
+		nonce = cuda_swab32(nonce);
 
 #if HOST_MIDSTATE
 		uint64_t state[8];
@@ -2072,7 +2072,10 @@ void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce
 			n[i] = xor1(n[i],h[i]);
 		}
 
-//		#pragma unroll
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
+		//		#pragma unroll
 		for (unsigned r=0; r < 10; r++) {
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
@@ -2341,10 +2344,10 @@ void whirlpool512_hash_80_sm3(int thr_id, uint32_t threads, uint32_t startNonce,
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	if (threads < 256)
+//	if (threads < 256)
 		applog(LOG_WARNING, "whirlpool requires a minimum of 256 threads to fetch constant tables!");
 
-	oldwhirlpool_gpu_hash_80<<<grid, block>>>(threads, startNonce, d_outputHash, 1);
+//	oldwhirlpool_gpu_hash_80<<<grid, block>>>(threads, startNonce, d_outputHash, NULL);
 }
 
 extern void whirl_midstate(void *state, const void *input);
@@ -2412,7 +2415,7 @@ void x16_whirlpool512_setBlock_80(int thr_id, void *pdata)
 }
 
 __host__
-void x16_whirlpool512_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_outputHash)
+void x16_whirlpool512_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_outputHash, int *order)
 {
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
@@ -2420,6 +2423,6 @@ void x16_whirlpool512_hash_80(int thr_id, const uint32_t threads, const uint32_t
 	if (threads < 256)
 		applog(LOG_WARNING, "whirlpool requires a minimum of 256 threads to fetch constant tables!");
 
-	oldwhirlpool_gpu_hash_80 << <grid, block>> > (threads, startNonce, d_outputHash, 1);
+	oldwhirlpool_gpu_hash_80 << <grid, block>> > (threads, startNonce, d_outputHash, order);
 //	oldwhirlpool_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNonce, d_outputHash, 1);
 }

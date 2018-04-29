@@ -120,7 +120,7 @@ static void(*pAlgo64[16])(int, uint32_t, uint32_t*, int*) =
 	x15_whirlpool_cpu_hash_64,
 	x17_sha512_cpu_hash_64 
 };
-static void(*pAlgo80[16])(int, uint32_t, uint32_t, uint32_t*) =
+static void(*pAlgo80[16])(int, uint32_t, uint32_t, uint32_t*, int*) =
 {
 	quark_blake512_cpu_hash_80,
 	quark_bmw512_cpu_hash_80,
@@ -328,32 +328,38 @@ __global__ void set_lo(int *ark)
 #define MID_SPEED 1
 #define LOW_SPEED 3
 #define MIN_SPEED 6
-#define SIMD_MAX (1 << 19)
+#define SIMD_MAX (1 << 20)
 uint8_t target_table[16] =
 {
-	0,//TOP_SPEED,	//60
-	0,//TOP_SPEED,	//71
-	6,//MIN_SPEED,	//7.8
-	2,//MID_SPEED,	//24.7
-	0,//TOP_SPEED,	//66.00
-	0,//TOP_SPEED,	//71.5
-	1,//MID_SPEED,	//32.1
-	2,//LOW_SPEED,	//17
-	3,//LOW_SPEED,	//14.82
-	6,//MIN_SPEED,	//6.08
-	5,//LOW_SPEED,	//8.7
-	5,//LOW_SPEED,	//10.6
-	5,//LOW_SPEED,	//11.6
-	0,//TOP_SPEED,	//115
-	2,//LOW_SPEED,	//15.8
-	0//TOP_SPEED	//71
+	//18 ,21 ,2.5,8 ,24 ,27 ,13,7.5,8 ,3.5,4 ,5 ,6.5,39,7 ,28.5
+	//.45,.55,.1 ,.2,.55,.70,.3,.2 ,.2,.1 ,.1,.1,.2,1  ,.2,.7
+	//4,5,1,2,5,7,3,2,2,1,1,1,2,10,2,7
+	//6,5,9,8,5,3,7,8,8,9,9,9,9, 0,8,3
+	//3,2,4,4,2,1,3,4,4,4,4,4,4, 0,4,1
+
+	6,//TOP_SPEED,	//18.0 > 14 //60
+	5,//TOP_SPEED,	//21.5 > 15 //71
+	9,//MIN_SPEED,	//2.4  > 14 //7.8
+	8,//MID_SPEED,	//8.1  > 13 //24.7
+	5,//TOP_SPEED,	//24.3 > 18 //66.00
+	3,//TOP_SPEED,	//27.1 > 18 //71.5
+	7,//MID_SPEED,	//13   > 18 //32.1
+	8,//LOW_SPEED,	//7.4  > 18 //17
+	8,//LOW_SPEED,	//8    > 18 //14.82
+	9,//MIN_SPEED,	//3.5  > 18 //6.08
+	9,//LOW_SPEED,	//4    > 18 //8.7
+	9,//LOW_SPEED,	//5.1  > 18 //10.6
+	9,//LOW_SPEED,	//6.7  > 19 //11.6
+	0,//TOP_SPEED,	//39   > 18 //115
+	8,//LOW_SPEED,	//7.0  > 21 //15.8
+	3//TOP_SPEED	//28.5 > 18 //71
 };
 
 void target_throughput(uint64_t target, uint32_t &throughput)
 {
 	bool simd = 0;
 	uint32_t t = throughput;
-	uint32_t avg = target_table[(target >> 60) & 0x0f] << 1;
+	int avg = target_table[(target >> 60) & 0x0f];
 	if (((target >> 60) & 0x0f) == SIMD)
 		simd = 1;
 	for (int i = 1; i < 16; i++)
@@ -363,12 +369,32 @@ void target_throughput(uint64_t target, uint32_t &throughput)
 			simd = 1;
 	}
 //	applog(LOG_DEBUG, "%d >> 4 = %d", avg, avg >> 4);
-	throughput >>= (avg >> 4);
-	throughput += 1 << (avg & 0xf);
-	throughput += throughput & 0xfff;
-	throughput &= ~0xfff;
-	throughput = (t < throughput) ? t : throughput;
-	throughput = (simd) ? (throughput >(SIMD_MAX)) ? SIMD_MAX : throughput : throughput;
+	int ratio;
+	if (throughput >= 1 << 25)
+		ratio = 32;
+	else if (throughput >= 1 << 24)
+		ratio = 32;
+	else if (throughput >= 1 << 23)
+		ratio = 32;
+	else if (throughput >= 1 << 22)
+		ratio = 32;
+	else if (throughput >= 1 << 21)
+		ratio = 32;
+	else if (throughput >= 1 << 20)
+		ratio = 36;
+	else if (throughput >= 1 << 19)
+		ratio = 40;
+	else if (throughput >= 1 << 18)
+		ratio = 44;
+	else if (throughput >= 1 << 17)
+		ratio = 48;
+	else
+		ratio = avg | 1;
+	avg += (-avg % ratio) > 0 ? (-avg % ratio) : -(-avg % ratio);
+	throughput >>= (avg / ratio);
+	throughput += -(int)throughput & 0xfff;
+//	throughput = (t < throughput) ? t : throughput;
+	throughput = (simd && (throughput >(SIMD_MAX))) ? SIMD_MAX : throughput;
 	throughput = (throughput) ? throughput : 0x1000;
 }
 
@@ -383,8 +409,8 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 			// reduce cpu usage
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		}
-		CUDA_SAFE_CALL(cudaMallocHost((void **)&h_ark[thr_id], sizeof(int)));
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_ark[thr_id], sizeof(int)), 0);
+		CUDA_SAFE_CALL(cudaMallocHost((void **)&h_ark[thr_id], sizeof(int)*16));
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_ark[thr_id], sizeof(int)*16), 0);
 
 //		CUDA_SAFE_CALL(cudaMalloc(&d_ark[thr_id], sizeof(int)));
 		*h_ark[thr_id] = 0;
@@ -401,7 +427,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 				sleep(1);
 		}
 //		set_lo << <1, 1 >> >(d_ark[thr_id]);
-		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamk[0]));
+		CUDA_SAFE_CALL(cudaMemcpy(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int)*16, cudaMemcpyHostToDevice));
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice));
 		
 		//		CUDA_SAFE_CALL(cudaGetLastError());
@@ -441,7 +467,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		quark_jh512_cpu_init(thr_id, throughput);
 		quark_keccak512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
-		//		x11_shavite512_cpu_init(thr_id, throughput);
+		x11_shavite512_cpu_init(thr_id, throughput);
 		if (throughput > (SIMD_MAX))
 		{
 			if (x11_simd512_cpu_init(thr_id, SIMD_MAX))
@@ -455,7 +481,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 			applog(LOG_WARNING, "SIMD was unable to initialize :( exiting...");
 			exit(-1);
 		}// 64
-		//		x16_echo512_cuda_init(thr_id, throughput);
+		x16_echo512_cuda_init(thr_id, throughput);
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
 		x16_fugue512_cpu_init(thr_id, throughput);
@@ -475,6 +501,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 extern volatile time_t g_work_time;
 
 static uint64_t tlast[MAX_GPUS] = { 0 };
+
 extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, uint64_t seq)
 {
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21) + BOOST;
@@ -482,6 +509,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	const int dev_id = device_map[thr_id];
+	static uint32_t compute_throughput;
 	if (pdata[19] == max_nonce)
 	{
 		if (seq == ~0ULL)
@@ -492,14 +520,16 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	//	if (strstr(device_name[dev_id], "GTX 1080")) intensity = 20;
 	//	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21);
 	int g_work_signal = 0;
+
 	throughput = min(throughput, max_nonce - first_nonce);
+	/*
 	if (throughput >= ((max_nonce - first_nonce) >> 1))
 	{
 		if (seq == ~0ULL)
 			*hashes_done = pdata[19] - first_nonce + throughput;
-		// TODO quit lying about those hashes getting computed.
 		return -128; // free hashes
 	}
+	*/
 	uint32_t _ALIGN(64) endiandata[20];
 
 	if (opt_benchmark) {
@@ -511,7 +541,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		*/
 		((uint32_t*)ptarget)[7] = 0x003f;
 		*((uint64_t*)&pdata[1]) = seq;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
-//		*((uint64_t*)&pdata[1]) = 0xbbbbbbbbbbbbbbbb;//2:64,4:80,8,a,e.. error//44B54B9F248C0708//0x31C8B76F520AEDF4;
+		//		*((uint64_t*)&pdata[1]) = 0xbbbbbbbbbbbbbbbb;//2:64,4:80,8,a,e.. error//44B54B9F248C0708//0x31C8B76F520AEDF4;
 		//489f 4f38 33f4 7016 //01346789f
 		((uint32_t*)pdata)[17] = 0x12345678;
 
@@ -520,18 +550,10 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 
 	for (int k = 0; k < 19; k++)
 		be32enc(&endiandata[k], pdata[k]);
-	uint32_t ntime = swab32(pdata[17]);
-	if (s_ntime != ntime) {
-		s_ntime = ntime;
-		if (!tlast[thr_id] || tlast[thr_id] != (*(uint64_t*)&endiandata[1]))
-			if (!thr_id) applog(LOG_INFO, "hash order %X%X (%08x)", endiandata[2], endiandata[1], ntime);
-	}
 
 	uint8_t algo80;
 
 	cuda_check_cpu_setTarget(ptarget, thr_id);
-	if (!tlast[thr_id] || tlast[thr_id] != (*(uint64_t*)&endiandata[1]))
-		tlast[thr_id] = (*(uint64_t*)&endiandata[1]);
 
 	algo80 = (*(uint64_t*)&endiandata[1] >> 60) & 0x0f;
 	switch (algo80) {
@@ -600,12 +622,42 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		x16_sha512_setBlock_80(thr_id, endiandata);
 		break;
 	}
-	target_throughput(*(uint64_t*)&endiandata[1], throughput);
+	/*
+		if (s_ntime != ntime) {
+		s_ntime = ntime;
+		if (!thr_id && (!tlast[thr_id] || tlast[thr_id] != (*(uint64_t*)&endiandata[1])))
+		applog(LOG_INFO, "hash order %X%X (%08x)", endiandata[2], endiandata[1], ntime);
+		}
+		*/
+	if (tlast[thr_id] != (*(uint64_t*)&endiandata[1]))
+	{
+		if (!thr_id)
+		{
+			target_throughput(*(uint64_t*)&endiandata[1], throughput);
+		}
+		else
+		{
+			tlast[thr_id] = (*(uint64_t*)&endiandata[1]);
+			target_throughput(*(uint64_t*)&endiandata[1], throughput);
+		}
+		compute_throughput = throughput;
+	}
+	else
+		throughput = compute_throughput;
+
+	uint32_t ntime = swab32(pdata[17]);
+
+	if (!thr_id && (!tlast[0] || tlast[0] != (*(uint64_t*)&endiandata[1]))) 
+	{
+		applog(LOG_INFO, "[%08X%08X] (%08X) (%f)", endiandata[2], endiandata[1], ntime, throughput2intensity(throughput));
+		tlast[0] = (*(uint64_t*)&endiandata[1]);
+	}
+
 //	work->nonces[0] = UINT32_MAX;
 	int warn = 0;
 
 	do {
-		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id]);
+		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id], d_ark[thr_id]);
 //		cudaStreamSynchronize(streamx[0]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
@@ -626,7 +678,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		//		run_x16r_rounds(&endiandata[1], thr_id, throughput, pdata[19], d_hash[thr_id]);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
-		//		cudaDeviceSynchronize();
+
 		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id], d_ark[thr_id]);
 #ifdef _DEBUG
 		uint32_t _ALIGN(64) dhash[8];
@@ -678,8 +730,8 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				if (ark_reset(thr_id))
 				{
 //					*hashes_done = 0;//pdata[19] - first_nonce - throughput;
-//					return -127;
-					return work->valid_nonces;
+					return -127;
+//					return work->valid_nonces;
 				}
 				//				if (work_restart[thr_id].restart) return -127;
 				return work->valid_nonces;
@@ -688,7 +740,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				// x11+ coins could do some random error, but not on retry
 				if (ark_reset(thr_id))
 				{
-					*hashes_done = 0;//pdata[19] - first_nonce - throughput;
+//					*hashes_done = 0;//pdata[19] - first_nonce - throughput;
 					return -127;
 				}
 				gpu_increment_reject(thr_id);
@@ -716,7 +768,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 			if (pdata[19] == max_nonce)
 				break;
 //			gpulog(LOG_INFO, thr_id, "G_WORK2");
-			g_work_time = 0;
+			/*
 			if ((throughput >> 1) > max_nonce - pdata[19])
 			{
 //				pdata[19] = max_nonce;
@@ -726,17 +778,14 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				}
 				return 0;
 			}
+			*/
 			throughput = max_nonce - pdata[19];
-//			pdata[19] = max_nonce;
-			if (work_restart[thr_id].restart || *h_ark[thr_id])
+			pdata[19] = max_nonce;
+			if (ark_reset(thr_id))
 			{
-				if (ark_reset(thr_id))
-				{
-					return -127;
-				}
-				//	if (work_restart[thr_id].restart) return -127;
-				return 0;
+				return -127;
 			}
+				//	if (work_restart[thr_id].restart) return -127;
 			continue;
 		}
 		else

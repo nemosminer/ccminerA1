@@ -436,7 +436,7 @@ void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint3
 }
 
 __host__
-void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -453,7 +453,7 @@ __constant__ static uint32_t c_JHState[32];
 __constant__ static uint32_t c_Message[4];
 
 __global__
-void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash)
+void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash, int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -481,6 +481,9 @@ void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint3
 			x[0][i] ^= h[i];
 		x[1][0] ^= 0x80U;
 		E8(x);
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
 		#pragma unroll
 		for (int i = 0; i < 4; i++)
 			x[4][i] ^= h[i];
@@ -500,13 +503,13 @@ void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint3
 }
 
 __host__
-void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	jh512_gpu_hash_80 << <grid, block>> > (threads, startNounce, d_hash);
+	jh512_gpu_hash_80 << <grid, block>> > (threads, startNounce, d_hash, order);
 //	jh512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, d_hash);
 }
 

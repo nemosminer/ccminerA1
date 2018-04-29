@@ -177,18 +177,22 @@ static inline void swab256(void *dest_p, const void *src_p)
 #if !HAVE_DECL_BE32DEC
 static inline uint32_t be32dec(const void *pp)
 {
-	const uint8_t *p = (uint8_t const *)pp;
-	return ((uint32_t)(p[3]) + ((uint32_t)(p[2]) << 8) +
-	    ((uint32_t)(p[1]) << 16) + ((uint32_t)(p[0]) << 24));
+	return ((*(uint32_t*)pp & 0xff000000) >> 24) | ((*(uint32_t*)pp & 0xff0000) >> 8) |
+		((*(uint32_t*)pp & 0xff00) << 8) | ((*(uint32_t*)pp) << 24);
+
+//	const uint8_t *p = (uint8_t const *)pp;
+//	return ((uint32_t)(p[3]) + ((uint32_t)(p[2]) << 8) +
+//	    ((uint32_t)(p[1]) << 16) + ((uint32_t)(p[0]) << 24));
 }
 #endif
 
 #if !HAVE_DECL_LE32DEC
 static inline uint32_t le32dec(const void *pp)
 {
-	const uint8_t *p = (uint8_t const *)pp;
-	return ((uint32_t)(p[0]) + ((uint32_t)(p[1]) << 8) +
-	    ((uint32_t)(p[2]) << 16) + ((uint32_t)(p[3]) << 24));
+	return (*(uint32_t*)pp);// & 0xffff) | ((*(uint32_t*)pp << 16) & 0xffff0000);
+//	const uint8_t *p = (uint8_t const *)pp;
+//	return ((uint32_t)(p[0]) + ((uint32_t)(p[1]) << 8) +
+//	    ((uint32_t)(p[2]) << 16) + ((uint32_t)(p[3]) << 24));
 }
 #endif
 
@@ -202,52 +206,63 @@ static inline void be32enc(void *pp, uint32_t x)
 	p[1] = (x >> 16) & 0xff;
 	p[0] = (x >> 24) & 0xff;
 	*/
-	*(uint32_t*)pp = ((x >> 24) & 0x00000000ff) | ((x << 8) & 0x00ff0000) | ((x >> 8) & 0x0000ff00) | ((x << 24) & 0xff000000);
+	*(uint32_t*)pp = (x >> 24) | ((x << 8) & 0x00ff0000) | ((x >> 8) & 0x0000ff00) | ((x << 24) & 0xff000000);
 }
 #endif
 
 #if !HAVE_DECL_LE32ENC
 static inline void le32enc(void *pp, uint32_t x)
 {
+	/*
 	uint8_t *p = (uint8_t *)pp;
 	p[0] = x & 0xff;
 	p[1] = (x >> 8) & 0xff;
 	p[2] = (x >> 16) & 0xff;
 	p[3] = (x >> 24) & 0xff;
+	*/
+	*(uint32_t*)pp = x;//(x >> 24) | ((x << 8) & 0x00ff0000) | ((x >> 8) & 0x0000ff00) | ((x << 24) & 0xff000000);
 }
 #endif
 
 #if !HAVE_DECL_BE16DEC
 static inline uint16_t be16dec(const void *pp)
 {
-	const uint8_t *p = (uint8_t const *)pp;
-	return ((uint16_t)(p[1]) + ((uint16_t)(p[0]) << 8));
+	return (*(uint16_t*)pp >> 8) | (*(uint16_t*)pp << 8);
+//	const uint8_t *p = (uint8_t const *)pp;
+//	return ((uint16_t)(p[1]) + ((uint16_t)(p[0]) << 8));
 }
 #endif
 
 #if !HAVE_DECL_BE16ENC
 static inline void be16enc(void *pp, uint16_t x)
 {
+	*(uint16_t*)pp = (x << 8) | (x >> 8);
+	/*
 	uint8_t *p = (uint8_t *)pp;
 	p[1] = x & 0xff;
 	p[0] = (x >> 8) & 0xff;
+	*/
 }
 #endif
 
 #if !HAVE_DECL_LE16DEC
 static inline uint16_t le16dec(const void *pp)
 {
-	const uint8_t *p = (uint8_t const *)pp;
-	return ((uint16_t)(p[0]) + ((uint16_t)(p[1]) << 8));
+	return *(uint16_t*)pp;
+//	const uint8_t *p = (uint8_t const *)pp;
+//	return ((uint16_t)(p[0]) + ((uint16_t)(p[1]) << 8));
 }
 #endif
 
 #if !HAVE_DECL_LE16ENC
 static inline void le16enc(void *pp, uint16_t x)
 {
+	*(uint16_t*)pp = x;
+	/*
 	uint8_t *p = (uint8_t *)pp;
 	p[0] = x & 0xff;
 	p[1] = (x >> 8) & 0xff;
+	*/
 }
 #endif
 

@@ -1707,7 +1707,7 @@ void x16_simd512_setBlock_80(int thr_id, void *pdata)
 #define TPB_SIMD 128
 __global__
 __launch_bounds__(TPB_SIMD,1)
-static void x16_simd512_gpu_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_outputhash)
+static void x16_simd512_gpu_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_outputhash, int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -1813,6 +1813,9 @@ static void x16_simd512_gpu_80(const uint32_t threads, const uint32_t startNonce
 			C32(0x8FA14956), C32(0x21BF9BD3), C32(0xB94D0943), C32(0x6FFDDC22),
 			IF, 25,  4, PP8_0_);
 
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
 		// Second round
 
 		u32 COPY_A0 = A0, COPY_A1 = A1, COPY_A2 = A2, COPY_A3 = A3, COPY_A4 = A4, COPY_A5 = A5, COPY_A6 = A6, COPY_A7 = A7;
@@ -1882,11 +1885,11 @@ static void x16_simd512_gpu_80(const uint32_t threads, const uint32_t startNonce
 /***************************************************/
 
 __host__
-void x16_simd512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash)
+void x16_simd512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, int *order)
 {
 	const uint32_t tpb = 128;
 	const dim3 grid((threads + tpb - 1) / tpb);
 	const dim3 block(tpb);
 //	x16_simd512_gpu_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNonce, (uint64_t*)d_hash);
-	x16_simd512_gpu_80 << <grid, block>> > (threads, startNonce, (uint64_t*)d_hash);
+	x16_simd512_gpu_80 << <grid, block>> > (threads, startNonce, (uint64_t*)d_hash, order);
 }

@@ -308,7 +308,7 @@ void groestl512_setBlock_80(int thr_id, uint32_t *endiandata)
 }
 
 __global__ __launch_bounds__(TPB, THF)
-void groestl512_gpu_hash_80_quad_a1_min3r(const uint32_t threads, const uint32_t startNounce, uint4* g_hash)
+void groestl512_gpu_hash_80_quad_a1_min3r(const uint32_t threads, const uint32_t startNounce, uint4* g_hash, int *order)
 {
 #if __CUDA_ARCH__ >= 300
 	// BEWARE : 4-WAY CODE (one hash need 4 threads)
@@ -360,6 +360,9 @@ void groestl512_gpu_hash_80_quad_a1_min3r(const uint32_t threads, const uint32_t
 
 		uint4 state[2];
 //		groestl512_progressMessage_quad((uint32_t*)state, (uint32_t*)msgBitsliced);
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
 		groestl512_progressMessage_quad_a1_min3r(state, msgBitsliced); // works
 
 		uint4 hash[4];
@@ -437,7 +440,7 @@ void groestl512_gpu_hash_80_quad(const uint32_t threads, const uint32_t startNou
 }
 
 __host__
-void groestl512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+void groestl512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
 {
 //	int dev_id = device_map[thr_id];
 
@@ -448,7 +451,7 @@ void groestl512_cuda_hash_80(const int thr_id, const uint32_t threads, const uin
 		dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
 		dim3 block(threadsperblock);
 		//! setup only for x16r(s?)
-		groestl512_gpu_hash_80_quad_a1_min3r << <grid, block>> > (threads << 2, startNounce, (uint4*)d_hash);
+		groestl512_gpu_hash_80_quad_a1_min3r << <grid, block>> > (threads << 2, startNounce, (uint4*)d_hash, order);
 //		groestl512_gpu_hash_80_quad_a1_min3r << <grid, block, 0, streamk[thr_id] >> > (threads << 2, startNounce, (uint4*)d_hash);
 //		groestl512_gpu_hash_80_quad<< <grid, block >> > (threads, startNounce, d_hash);
 		/*

@@ -284,7 +284,7 @@ void cubehash512_setBlock_80(int thr_id, uint32_t* endiandata)
 }
 
 __global__
-void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint64_t *g_outhash)
+void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint64_t *g_outhash, int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -313,6 +313,9 @@ void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce,
 		message[6] = 0;
 		message[7] = 0;
 		Update32(x, message);
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
 
 		uint32_t* output = (uint32_t*)(&g_outhash[(size_t)8 * thread]);
 		Final(x, output);
@@ -320,13 +323,13 @@ void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce,
 }
 
 __host__
-void cubehash512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+void cubehash512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	cubehash512_gpu_hash_80 << <grid, block>> > (threads, startNounce, (uint64_t*)d_hash);
+	cubehash512_gpu_hash_80 << <grid, block>> > (threads, startNounce, (uint64_t*)d_hash, order);
 //	cubehash512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> > (threads, startNounce, (uint64_t*)d_hash);
 }
 

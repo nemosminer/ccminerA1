@@ -788,7 +788,7 @@ __launch_bounds__(TPB52, 3)
 #else
 __launch_bounds__(TPB50, 5)
 #endif
-void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output64)
+void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output64, int *order)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -922,6 +922,10 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *outp
 
 		p[0] = p[1] = p[2] = p[3] = p[4] =p[5] =p[6] = p[7] = vectorize(0);
 
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
+
 		TFBIG_4e_UI2(0);
 		TFBIG_4o_UI2(1);
 		TFBIG_4e_UI2(2);
@@ -950,7 +954,7 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *outp
 }
 
 __host__
-void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash) //, int swap)
+void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int *order)
 {
 	uint32_t tpb = TPB52;
 	int dev_id = device_map[thr_id];
@@ -960,7 +964,7 @@ void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, ui
 	const dim3 block(tpb);
 
 	// hash function is cut in 2 parts to reduce kernel size
-	skein512_gpu_hash_80 << < grid, block>> > (threads, startNounce, (uint64_t*)d_hash);
+	skein512_gpu_hash_80 << < grid, block>> > (threads, startNounce, (uint64_t*)d_hash, order);
 //	skein512_gpu_hash_80 << < grid, block, 0, streamk[thr_id] >> > (threads, startNounce, (uint64_t*)d_hash);
 }
 

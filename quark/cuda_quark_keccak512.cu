@@ -262,7 +262,7 @@ void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash,
 
 void jackpot_keccak512_cpu_init(int thr_id, uint32_t threads);
 void jackpot_keccak512_cpu_setBlock(int thr_id, void *pdata, size_t inlen);
-void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
+void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int *order);
 
 __host__
 void quark_keccak512_cpu_init(int thr_id, uint32_t threads)
@@ -282,7 +282,7 @@ void keccak512_setBlock_80(int thr_id, uint32_t *endiandata)
 }
 
 __host__
-void keccak512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+void keccak512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
 {
-	jackpot_keccak512_cpu_hash(thr_id, threads, startNounce, d_hash, 0);
+	jackpot_keccak512_cpu_hash(thr_id, threads, startNounce, d_hash, order);
 }

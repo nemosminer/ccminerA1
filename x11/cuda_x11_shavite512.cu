@@ -135,7 +135,7 @@ static void round_4_8_12(const uint32_t* __restrict__ sharedMemory, uint32_t* r,
 }
 
 __device__ __forceinline__
-static void c512(const uint32_t* sharedMemory, const uint32_t *state, uint32_t *msg, uint2x4 *Hash, const uint32_t counter)
+static void c512(const uint32_t* sharedMemory, const uint32_t *state, uint32_t *msg, uint2x4 *Hash, const uint32_t counter, int *order)
 {
 	uint4 p[4];
 	uint4 x;
@@ -338,6 +338,10 @@ static void c512(const uint32_t* sharedMemory, const uint32_t *state, uint32_t *
 	AES_ROUND_NOKEY(sharedMemory, &x);
 	p[0] ^= x;
 
+#ifdef A1MIN3R_MOD
+	if (*order) { return; }
+#endif
+
 	/* round 3, 7, 11 */
 	round_3_7_11(sharedMemory, r, p, x);
 
@@ -514,7 +518,7 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		msg[30] = 0;
 		msg[31] = 0x02000000;
 
-		c512(sharedMemory, state, msg, (uint2x4*)Hash, 512);
+		c512(sharedMemory, state, msg, (uint2x4*)Hash, 512, NULL);
 		/*
 		#pragma unroll 16
 		for(int i=0;i<16;i++)
@@ -534,7 +538,7 @@ __global__ __launch_bounds__(TPB, 2)
 #else
 #error "Not set up for this"
 #endif
-void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
+void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, int *order)
 {
 	#if TPB == 128
 	aes_gpu_init_128(sharedMemory);
@@ -577,7 +581,7 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t
 		r[27] = 0x2800000;
 		r[31] = 0x2000000;
 		*/
-		c512(sharedMemory, state, r, (uint2x4*)Hash, 640);
+		c512(sharedMemory, state, r, (uint2x4*)Hash, 640, order);
 
 	} //thread < threads
 }
@@ -597,14 +601,14 @@ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 }
 
 __host__
-void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
+void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int *order)
 {
 	const uint32_t threadsperblock = TPB;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x11_shavite512_gpu_hash_80 << <grid, block>> >(threads, startNounce, (uint64_t*)d_outputHash);
+	x11_shavite512_gpu_hash_80 << <grid, block>> >(threads, startNounce, (uint64_t*)d_outputHash, order);
 //	x11_shavite512_gpu_hash_80 << <grid, block, 0, streamk[thr_id] >> >(threads, startNounce, (uint64_t*)d_outputHash);
 }
 
