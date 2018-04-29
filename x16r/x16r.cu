@@ -484,7 +484,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	const int dev_id = device_map[thr_id];
 	if (pdata[19] == max_nonce)
 	{
-		if (seq == -1)
+		if (seq == ~0ULL)
 			*hashes_done = pdata[19] - first_nonce + throughput;
 		return -128;
 	}
@@ -495,7 +495,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	throughput = min(throughput, max_nonce - first_nonce);
 	if (throughput >= ((max_nonce - first_nonce) >> 1))
 	{
-		if (seq == -1)
+		if (seq == ~0ULL)
 			*hashes_done = pdata[19] - first_nonce + throughput;
 		// TODO quit lying about those hashes getting computed.
 		return -128; // free hashes
@@ -676,14 +676,21 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				applog(LOG_ERR,  "F80: %s", fails);
 #endif
 				if (ark_reset(thr_id))
-					return -127;
+				{
+//					*hashes_done = 0;//pdata[19] - first_nonce - throughput;
+//					return -127;
+					return work->valid_nonces;
+				}
 				//				if (work_restart[thr_id].restart) return -127;
 				return work->valid_nonces;
 			}
 			else if (vhash[7] > Htarg) {
 				// x11+ coins could do some random error, but not on retry
 				if (ark_reset(thr_id))
+				{
+					*hashes_done = 0;//pdata[19] - first_nonce - throughput;
 					return -127;
+				}
 				gpu_increment_reject(thr_id);
 				algo80_fails[algo80]++;
 				if (!opt_quiet)	gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU! %s %X%X",
@@ -712,13 +719,24 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 			g_work_time = 0;
 			if ((throughput >> 1) > max_nonce - pdata[19])
 			{
-				pdata[19] = max_nonce;
-				break;
+//				pdata[19] = max_nonce;
+				if (ark_reset(thr_id))
+				{
+					return -127;
+				}
+				return 0;
 			}
 			throughput = max_nonce - pdata[19];
-			pdata[19] = max_nonce;
-			if (!work_restart[thr_id].restart || *h_ark[thr_id])
-				break;
+//			pdata[19] = max_nonce;
+			if (work_restart[thr_id].restart || *h_ark[thr_id])
+			{
+				if (ark_reset(thr_id))
+				{
+					return -127;
+				}
+				//	if (work_restart[thr_id].restart) return -127;
+				return 0;
+			}
 			continue;
 		}
 		else
@@ -741,9 +759,13 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		*/
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart && *h_ark[thr_id] == 0);
 
-	*hashes_done = pdata[19] - first_nonce;
+	if ((uint64_t)throughput + pdata[19] < max_nonce)
+		*hashes_done = pdata[19] - first_nonce;
+
 	if (ark_reset(thr_id))
+	{
 		return -127;
+	}
 	//	if (work_restart[thr_id].restart) return -127;
 	return 0;
 }

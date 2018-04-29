@@ -1966,7 +1966,7 @@ void sig_fn(int sig)
 }
 */
 uint64_t opt_seq = 0x123456789abcdef;
-#define X16R_BLOCKTIME_GUESS 30
+#define X16R_BLOCKTIME_GUESS 15
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -2150,10 +2150,10 @@ static void *miner_thread(void *userdata)
 		} 
 		else if (have_stratum)
 		{
-			asm("UD2")
 //			gpulog(LOG_BLUE, thr_id, "REGEN");
 //			if (stratum_gen_work(&stratum, &g_work))
-			if (strncmp(work.job_id, g_work.job_id, 128))
+//			if (regen || strncmp(work.job_id, g_work.job_id, 128) || max_nonce == 0)
+			if (regen || strncmp(work.job_id, g_work.job_id, 128) || max_nonce == 0)
 			{
 //				g_work_time = time(NULL);
 				stratum.job.shares_count = 0;
@@ -2168,7 +2168,12 @@ static void *miner_thread(void *userdata)
 //				nonceptr[0] = t;
 //				gpulog(LOG_NOTICE, thr_id, "job update");
 			}
-		} 
+			else
+			{
+				pthread_mutex_unlock(&g_work_lock);
+				nonceptr[0]++; //??
+			}
+		}
 		/*
 		else if (strncmp(work.job_id, g_work.job_id, 128))
 		{// compare up to work/g_work.job_id array bounds.
@@ -2500,12 +2505,13 @@ static void *miner_thread(void *userdata)
 			{
 				if (opt_time_limit > 0)
 				{
-					rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done, -1);
+					rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done, ~0ULL);
 				}
 				else
-					rc = scanhash_x16r(thr_id, &work, end_nonce, &hashes_done, opt_seq);
+					rc = scanhash_x16r(thr_id, &work, 1 << 28, &hashes_done, opt_seq);
 			}
-
+			if (rc < 0 && (hashes_done > nonceptr[0] - max_nonce || hashes_done == 0))
+				hashes_done = nonceptr[0] - max_nonce;
 //				if (rc == -127)
 				{
 //					work.data[19] = max_nonce;
@@ -2533,6 +2539,20 @@ static void *miner_thread(void *userdata)
 
 //		if (work_restart[thr_id].restart)
 //			continue;
+		if (rc == -127)
+		{
+			//			work.data[19] = max_nonce;
+			//			if (work_restart[thr_id].restart)
+			//			work_done = 1;
+			//			gpulog(LOG_NOTICE, thr_id, "Restart thread");
+			continue;
+		}
+		else if (rc == -128)
+		{
+			//			work.data[19] = max_nonce;
+			//			usleep(100);
+			continue;
+		}
 
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
@@ -2564,10 +2584,11 @@ static void *miner_thread(void *userdata)
 			/* store thread hashrate */
 			if (dtime > 0.0) {
 				pthread_mutex_lock(&stats_lock);
+
 				thr_hashrates[thr_id] = hashes_done / dtime;
-//				thr_hashrates[thr_id] *= rate_factor;
+					//				thr_hashrates[thr_id] *= rate_factor;
 				if (loopcnt > 2) // ignore first (init time)
-					stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc, work.height);
+					stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t)rc, work.height);
 				pthread_mutex_unlock(&stats_lock);
 			}
 		}
@@ -2576,20 +2597,6 @@ static void *miner_thread(void *userdata)
 //			work.scanned_to = work.nonces[0];
 //		else if (rc > 1)
 			work.scanned_to = max(work.nonces[0], work.nonces[1]);
-		else if (rc == -127)
-		{
-//			work.data[19] = max_nonce;
-//			if (work_restart[thr_id].restart)
-//			work_done = 1;
-//			gpulog(LOG_NOTICE, thr_id, "Restart thread");
-			continue;
-		}
-		else if (rc == -128)
-		{
-//			work.data[19] = max_nonce;
-//			usleep(100);
-			continue;
-		}
 		else {
 			work.scanned_to = max_nonce;
 			if (opt_debug && opt_benchmark) {
@@ -2657,7 +2664,7 @@ static void *miner_thread(void *userdata)
 			}
 			*/
 //			if (max_nonce - work.scanned_to < (3 << 21))
-//				work_done = 1;
+			work_done = 1;
 			if (!submit_work(mythr, &work))
 				break;
 			nonceptr[0] = curnonce;
