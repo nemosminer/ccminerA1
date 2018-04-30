@@ -869,7 +869,7 @@ __host__ void ark_switch(int thr_id)
 //	while (q < thr_id) sleep(1);
 	if (init_items[thr_id]) //&& (*h_ark[thr_id] == 0))
 	{
-//		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(device_map[thr_id]);
 //		set_hi << <1, 1, 0, streamx[0]>> >(d_ark[thr_id]);
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[0]));
 //		if (*h_ark[thr_id] == 0)
