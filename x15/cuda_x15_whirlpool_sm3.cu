@@ -2000,7 +2000,7 @@ const int i0, const int i1, const int i2, const int i3, const int i4, const int 
 
 
 __global__
-void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, void *outputHash, int *order)
+void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, void *outputHash, volatile int *order)
 {
 	__shared__ uint64_t sharedMemory[2048];
 
@@ -2415,7 +2415,7 @@ void x16_whirlpool512_setBlock_80(int thr_id, void *pdata)
 }
 
 __host__
-void x16_whirlpool512_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_outputHash, int *order)
+void x16_whirlpool512_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_outputHash, volatile int *order)
 {
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);

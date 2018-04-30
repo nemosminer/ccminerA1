@@ -308,7 +308,7 @@ void x16_fugue512_setBlock_80(int thr_id, void *pdata)
 
 __global__
 __launch_bounds__(TPB)
-void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash, int *order)
+void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash, volatile int *order)
 {
 	__shared__ uint32_t mixtabs[1024];
 
@@ -463,7 +463,7 @@ void x16_fugue512_cpu_free(int thr_id)
 }
 
 __host__
-void x16_fugue512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, int *order)
+void x16_fugue512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = TPB;
 

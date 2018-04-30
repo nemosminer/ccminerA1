@@ -475,7 +475,7 @@ void jackpot_keccak512_cpu_setBlock(int thr_id, void *pdata, size_t inlen)
 }
 
 __global__
-void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, int *order)
+void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, volatile int *order)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -519,7 +519,7 @@ void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t
 }
 
 __host__
-void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int *order)
+void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 256;
 

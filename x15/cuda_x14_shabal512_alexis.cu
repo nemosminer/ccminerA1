@@ -2,6 +2,7 @@
  * Shabal-512 for X14/X15
  * Provos Alexis - 2016
  */
+#include "miner.h"
 //#include "cuda_helper.h"
 #include "cuda_helper_alexis.h"
 #include "cuda_vectors_alexis.h"
@@ -103,7 +104,7 @@ void ROTATE(uint32_t* A){
 /***************************************************/
 // GPU Hash Function
 __global__ __launch_bounds__(384,3)
-void x14_shabal512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *order)
+void x14_shabal512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -170,7 +171,7 @@ void x14_shabal512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *o
 	}
 }
 
-__host__ void x14_shabal512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
+__host__ void x14_shabal512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 384;
 
@@ -178,7 +179,7 @@ __host__ void x14_shabal512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uin
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x14_shabal512_gpu_hash_64_alexis << <grid, block>> >(threads, d_hash, order);
+	x14_shabal512_gpu_hash_64_alexis << <grid, block >> >(threads, d_hash, (volatile int*)order);
 //	x14_shabal512_gpu_hash_64_alexis << <grid, block, 0, streamk[thr_id] >> >(threads, d_hash, order);
 }
 

@@ -116,7 +116,7 @@ void quark_blake512_compress(uint64_t *h, const uint64_t *block, const uint8_t (
 }
 
 __global__ __launch_bounds__(256, 4)
-void quark_blake512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
+void quark_blake512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -238,7 +238,7 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 #endif
 
 __host__
-void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_outputHash, int *order)
+void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_outputHash, volatile int *order)
 {
 #ifdef SP_KERNEL
 	int dev_id = device_map[thr_id];
@@ -250,7 +250,7 @@ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_output
 		const uint32_t threadsperblock = 256;
 		dim3 grid((threads + threadsperblock-1)/threadsperblock);
 		dim3 block(threadsperblock);
-		quark_blake512_gpu_hash_64 << <grid, block>> >(threads, (uint64_t*)d_outputHash, order);
+		quark_blake512_gpu_hash_64 << <grid, block>> >(threads, (uint64_t*)d_outputHash, (volatile int*)order);
 //		if (thr_id < MAX_GPUS)
 //			quark_blake512_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> >(threads, (uint64_t*)d_outputHash, order);
 //		else
@@ -260,7 +260,7 @@ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_output
 }
 
 __host__
-void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int *order)
+void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, volatile int *order)
 {
 #ifdef SP_KERNEL
 	int dev_id = device_map[thr_id];

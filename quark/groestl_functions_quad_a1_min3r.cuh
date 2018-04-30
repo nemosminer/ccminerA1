@@ -1,7 +1,6 @@
 #include "cuda_helper.h"
 #include "cuda_vectors_alexis.h"
 
-
 __device__ __forceinline__
 void G256_Mul2_a1_min3r(uint32_t *regs)
 {

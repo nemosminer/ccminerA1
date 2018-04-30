@@ -322,7 +322,7 @@ __launch_bounds__(32, 16)
 #else
 __launch_bounds__(64, 8)
 #endif
-void quark_bmw512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
+void quark_bmw512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -466,7 +466,7 @@ void quark_bmw512_cpu_setBlock_80(int thr_id, void *pdata)
 }
 
 __host__
-void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int *order)
+void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 128;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -487,7 +487,7 @@ void quark_bmw512_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
+void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 32;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -495,7 +495,7 @@ void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, in
 
 //	int dev_id = device_map[thr_id];
 //	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
-	quark_bmw512_gpu_hash_64 << <grid, block>> >(threads, (uint64_t*)d_hash, order);
+	quark_bmw512_gpu_hash_64 << <grid, block >> >(threads, (uint64_t*)d_hash, (volatile int*)order);
 //	if (thr_id < MAX_GPUS)
 //		quark_bmw512_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> >(threads, (uint64_t*)d_hash, order);
 //	else

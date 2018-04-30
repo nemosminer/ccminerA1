@@ -623,7 +623,7 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 
 
 __global__ __launch_bounds__(256, 4)
-void qubit_luffa512_gpu_hash_80_alexis(const uint32_t threads,const uint32_t startNounce, uint32_t *outputHash, int *order)
+void qubit_luffa512_gpu_hash_80_alexis(const uint32_t threads, const uint32_t startNounce, uint32_t *outputHash, volatile int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -674,7 +674,7 @@ void qubit_luffa512_gpu_hash_80_alexis(const uint32_t threads,const uint32_t sta
 }
 
 __host__
-void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int *order)
+void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, volatile int *order)
 {
 
 	const uint32_t threadsperblock = 256;
@@ -692,7 +692,7 @@ void qubit_luffa512_cpu_hash_80_alexis(int thr_id, uint32_t threads, uint32_t st
 
 __global__
 __launch_bounds__(384,2)
-void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *order)
+void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -736,6 +736,10 @@ void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *or
 			statebuffer[i] = 0;
 
 		rnd512(statebuffer, statechainv);
+
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
 
 		/*---- blank round with m=0 ----*/
 		rnd512_nullhash(statechainv);
@@ -844,14 +848,14 @@ void qubit_luffa512_cpu_setBlock_80_alexis(int thr_id, void *pdata)
 }
 
 __host__
-void x11_luffa512_cpu_hash_64_alexis(int thr_id, uint32_t threads,uint32_t *d_hash, int *order)
+void x11_luffa512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
     const uint32_t threadsperblock = 384;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
-	x11_luffa512_gpu_hash_64_alexis << <grid, block>> >(threads, d_hash, order);
+	x11_luffa512_gpu_hash_64_alexis << <grid, block >> >(threads, d_hash, (volatile int*)order);
 //	if (thr_id < MAX_GPUS)
 //		x11_luffa512_gpu_hash_64_alexis << <grid, block, 0, streamk[thr_id] >> >(threads, d_hash, order);
 //	else

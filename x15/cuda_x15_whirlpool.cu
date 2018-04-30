@@ -624,7 +624,7 @@ void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 
 __global__
 __launch_bounds__(TPB64,2)
-void x15_whirlpool_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
+void x15_whirlpool_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -697,8 +697,8 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
 			n[i] = n[i] ^ h[i];
 		}
 
-//		#pragma unroll 10
-		for (int i=0; i < 10; i++) {
+		#pragma unroll 5
+		for (int i=0; i < 5; i++) {
 			tmp[ 0] = InitVector_RC[i];
 			tmp[ 0]^= d_ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1);
 			tmp[ 1] = d_ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2);
@@ -717,6 +717,30 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
 			tmp[ 5] = d_ROUND_ELT1(sharedMemory,n, 5, 4, 3, 2, 1, 0, 7, 6, tmp[5]);
 			tmp[ 6] = d_ROUND_ELT1_LDG(sharedMemory,n, 6, 5, 4, 3, 2, 1, 0, 7, tmp[6]);
 			tmp[ 7] = d_ROUND_ELT1(sharedMemory,n, 7, 6, 5, 4, 3, 2, 1, 0, tmp[7]);
+			TRANSFER(n, tmp);
+		}
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
+		for (int i = 5; i < 10; i++) {
+			tmp[0] = InitVector_RC[i];
+			tmp[0] ^= d_ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1);
+			tmp[1] = d_ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2);
+			tmp[2] = d_ROUND_ELT_LDG(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3);
+			tmp[3] = d_ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4);
+			tmp[4] = d_ROUND_ELT_LDG(sharedMemory, h, 4, 3, 2, 1, 0, 7, 6, 5);
+			tmp[5] = d_ROUND_ELT(sharedMemory, h, 5, 4, 3, 2, 1, 0, 7, 6);
+			tmp[6] = d_ROUND_ELT(sharedMemory, h, 6, 5, 4, 3, 2, 1, 0, 7);
+			tmp[7] = d_ROUND_ELT(sharedMemory, h, 7, 6, 5, 4, 3, 2, 1, 0);
+			TRANSFER(h, tmp);
+			tmp[0] = d_ROUND_ELT1(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1, tmp[0]);
+			tmp[1] = d_ROUND_ELT1_LDG(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2, tmp[1]);
+			tmp[2] = d_ROUND_ELT1(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3, tmp[2]);
+			tmp[3] = d_ROUND_ELT1(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4, tmp[3]);
+			tmp[4] = d_ROUND_ELT1_LDG(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5, tmp[4]);
+			tmp[5] = d_ROUND_ELT1(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6, tmp[5]);
+			tmp[6] = d_ROUND_ELT1_LDG(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7, tmp[6]);
+			tmp[7] = d_ROUND_ELT1(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0, tmp[7]);
 			TRANSFER(n, tmp);
 		}
 
@@ -744,12 +768,12 @@ static void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_
 }
 #endif
 __host__
-void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
+void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 	dim3 grid((threads + TPB64 - 1) / TPB64);
 	dim3 block(TPB64);
 
-	x15_whirlpool_gpu_hash_64 << <grid, block>> > (threads, (uint64_t*)d_hash, order);
+	x15_whirlpool_gpu_hash_64 << <grid, block >> > (threads, (uint64_t*)d_hash, (volatile int*)order);
 //	x15_whirlpool_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> > (threads, (uint64_t*)d_hash, order);
 	//	x15_whirlpool_cpu_hash_64(thr_id, threads, d_hash);
 }

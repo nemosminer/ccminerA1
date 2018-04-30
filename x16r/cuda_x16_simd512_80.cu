@@ -1707,7 +1707,7 @@ void x16_simd512_setBlock_80(int thr_id, void *pdata)
 #define TPB_SIMD 128
 __global__
 __launch_bounds__(TPB_SIMD,1)
-static void x16_simd512_gpu_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_outputhash, int *order)
+static void x16_simd512_gpu_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_outputhash, volatile int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -1885,7 +1885,7 @@ static void x16_simd512_gpu_80(const uint32_t threads, const uint32_t startNonce
 /***************************************************/
 
 __host__
-void x16_simd512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, int *order)
+void x16_simd512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t tpb = 128;
 	const dim3 grid((threads + tpb - 1) / tpb);

@@ -135,7 +135,7 @@ static void round_4_8_12(const uint32_t* __restrict__ sharedMemory, uint32_t* r,
 }
 
 __device__ __forceinline__
-static void c512(const uint32_t* sharedMemory, const uint32_t *state, uint32_t *msg, uint2x4 *Hash, const uint32_t counter, int *order)
+static void c512(const uint32_t* sharedMemory, const uint32_t *state, uint32_t *msg, uint2x4 *Hash, const uint32_t counter, volatile int *order)
 {
 	uint4 p[4];
 	uint4 x;
@@ -538,7 +538,7 @@ __global__ __launch_bounds__(TPB, 2)
 #else
 #error "Not set up for this"
 #endif
-void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, int *order)
+void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, volatile int *order)
 {
 	#if TPB == 128
 	aes_gpu_init_128(sharedMemory);
@@ -601,7 +601,7 @@ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 }
 
 __host__
-void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int *order)
+void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, volatile int *order)
 {
 	const uint32_t threadsperblock = TPB;
 

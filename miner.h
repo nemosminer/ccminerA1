@@ -965,6 +965,10 @@ void wildkeccak_hash(void *output, const void *input, uint64_t* scratchpad, uint
 void zr5hash(void *output, const void *input);
 void zr5hash_pok(void *output, uint32_t *pdata);
 
+#ifndef A1MIN3R_MOD
+#define A1MIN3R_MOD
+#endif
+
 #ifdef __cplusplus
 }
 #endif

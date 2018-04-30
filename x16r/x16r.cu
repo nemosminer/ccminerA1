@@ -101,26 +101,27 @@ __host__ int ark_reset(int thr_id);
 //__constant__ int *d_ark[MAX_GPUS] = { NULL };
 //__device__ __constant__ int d_ark[MAX_GPUS];
 
-static void(*pAlgo64[16])(int, uint32_t, uint32_t*, int*) =
+static void(*pAlgo64[16])(int, uint32_t, uint32_t*, volatile int*) =
 {
-	quark_blake512_cpu_hash_64,
-	quark_bmw512_cpu_hash_64,
-	quark_groestl512_cpu_hash_64,//! optimizing, so -1 flag used to run special code (if GPU is new enough)
-	quark_jh512_cpu_hash_64,
-	quark_keccak512_cpu_hash_64,
-	quark_skein512_cpu_hash_64,
-	x11_luffa512_cpu_hash_64_alexis,
-	x11_cubehash512_cpu_hash_64,
-	x11_shavite512_cpu_hash_64_alexis,
-	x11_simd512_cpu_hash_64, //! uses order for cpu wait
-	x11_echo512_cpu_hash_64_alexis,
-	x13_hamsi512_cpu_hash_64_alexis,
-	x13_fugue512_cpu_hash_64_alexis,
-	x14_shabal512_cpu_hash_64_alexis,
-	x15_whirlpool_cpu_hash_64,
-	x17_sha512_cpu_hash_64 
+	quark_blake512_cpu_hash_64,		//2,//TOP_SPEED,	//18.0 > 14 //60
+	quark_bmw512_cpu_hash_64,		//1,//TOP_SPEED,	//21.5 > 15 //71
+	quark_groestl512_cpu_hash_64,	//3,//MIN_SPEED,	//2.4  > 14 //7.8
+	quark_jh512_cpu_hash_64,		//3,//MID_SPEED,	//8.1  > 13 //24.7
+	quark_keccak512_cpu_hash_64,	//1,//TOP_SPEED,	//24.3 > 18 //66.00
+	quark_skein512_cpu_hash_64,		//0,//TOP_SPEED,	//27.1 > 18 //71.5
+	x11_luffa512_cpu_hash_64_alexis,//2,//MID_SPEED,	//13   > 18 //32.1
+	x11_cubehash512_cpu_hash_64,	//3,//LOW_SPEED,	//7.4  > 18 //17
+	x11_shavite512_cpu_hash_64_alexis,//3,LOW_SPEED,	//8    > 18 //14.82
+	x11_simd512_cpu_hash_64,		//3,//MIN_SPEED,	//3.5  > 18 //6.08
+	x11_echo512_cpu_hash_64_alexis,	//3,//LOW_SPEED,	//4    > 18 //8.7
+	x13_hamsi512_cpu_hash_64_alexis,//3,//LOW_SPEED,	//5.1  > 18 //10.6
+	x13_fugue512_cpu_hash_64_alexis,//3,//LOW_SPEED,	//6.7  > 19 //11.6
+	x14_shabal512_cpu_hash_64_alexis,//0,/TOP_SPEED,	//39   > 18 //115
+	x15_whirlpool_cpu_hash_64,		//3,//LOW_SPEED,	//7.0  > 21 //15.8
+	x17_sha512_cpu_hash_64			//0//TOP_SPEED	//28.5 > 18 //71
 };
-static void(*pAlgo80[16])(int, uint32_t, uint32_t, uint32_t*, int*) =
+
+static void(*pAlgo80[16])(int, uint32_t, uint32_t, uint32_t*, volatile int*) =
 {
 	quark_blake512_cpu_hash_80,
 	quark_bmw512_cpu_hash_80,
@@ -407,7 +408,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
 			cudaDeviceReset();
 			// reduce cpu usage
-			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync | cudaDeviceMapHost);
 		}
 		CUDA_SAFE_CALL(cudaMallocHost((void **)&h_ark[thr_id], sizeof(int)*16));
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_ark[thr_id], sizeof(int)*16), 0);
@@ -649,7 +650,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 
 	do {
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id], d_ark[thr_id]);
-		cudaStreamSynchronize(streamx[thr_id]);
+//		cudaStreamSynchronize(streamx[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (3 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);

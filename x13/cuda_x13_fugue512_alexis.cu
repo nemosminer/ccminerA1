@@ -244,7 +244,7 @@ static void SMIX_LDG(const uint32_t shared[4][256], uint32_t &x0,uint32_t &x1,ui
 /***************************************************/
 // Die Hash-Funktion
 __global__ __launch_bounds__(256,3)
-void x13_fugue512_gpu_hash_64_alexis(uint32_t threads, uint64_t *g_hash, int *order)
+void x13_fugue512_gpu_hash_64_alexis(uint32_t threads, uint64_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -301,7 +301,10 @@ void x13_fugue512_gpu_hash_64_alexis(uint32_t threads, uint64_t *g_hash, int *or
 			CMIX36(S[ 0], S[ 1], S[ 2], S[ 4], S[ 5], S[ 6], S[18], S[19], S[20]);
 			SMIX_LDG(shared, S[ 0], S[ 1], S[ 2], S[ 3]);
 		}
-		#pragma unroll
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
+#pragma unroll
 		for (uint32_t i = 0; i < 13; i ++) {
 			S[ 4] ^= S[ 0];	S[ 9] ^= S[ 0];	S[18] ^= S[ 0];	S[27] ^= S[ 0];
 			mROR9;
@@ -410,7 +413,7 @@ void x13_fugue512_gpu_hash_64_final_alexis(uint32_t threads,const uint32_t* __re
 }
 
 __host__
-void x13_fugue512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, int *order){
+void x13_fugue512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order){
 
 	const uint32_t threadsperblock = 256;
 
@@ -418,7 +421,7 @@ void x13_fugue512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_h
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x13_fugue512_gpu_hash_64_alexis << <grid, block>> >(threads, (uint64_t*)d_hash, order);
+	x13_fugue512_gpu_hash_64_alexis << <grid, block >> >(threads, (uint64_t*)d_hash, (volatile int*)order);
 //	x13_fugue512_gpu_hash_64_alexis << <grid, block, 0, streamk[thr_id] >> >(threads, (uint64_t*)d_hash, order);
 }
 

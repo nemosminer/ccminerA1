@@ -280,7 +280,7 @@ void x11_echo512_cpu_hash_64_final_alexis(int thr_id, uint32_t threads, uint32_t
 }
 
 __global__ __launch_bounds__(128, 5) /* will force 80 registers */
-static void x11_echo512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, int *order)
+static void x11_echo512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -425,8 +425,14 @@ static void x11_echo512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, i
 
 		}
 
-		for (int k = 1; k < 10; k++)
+		for (int k = 1; k < 5; k++)
 			echo_round_alexis(sharedMemory,W,k0);
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
+		for (int k = 5; k < 10; k++)
+			echo_round_alexis(sharedMemory, W, k0);
+
 
 		#pragma unroll 4
 		for (int i = 0; i < 16; i += 4)
@@ -442,7 +448,7 @@ static void x11_echo512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, i
 }
 
 __host__
-void x11_echo512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
+void x11_echo512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 
 	const uint32_t threadsperblock = 128;
@@ -450,6 +456,6 @@ void x11_echo512_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_ha
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x11_echo512_gpu_hash_64_alexis << <grid, block>> >(threads, d_hash, order);
+	x11_echo512_gpu_hash_64_alexis << <grid, block >> >(threads, d_hash, (volatile int*)order);
 //	x11_echo512_gpu_hash_64_alexis << <grid, block, 0, streamk[thr_id] >> >(threads, d_hash, order);
 }

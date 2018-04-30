@@ -467,7 +467,7 @@ __launch_bounds__(TPB52, 3)
 #else
 __launch_bounds__(TPB50, 5)
 #endif
-void quark_skein512_gpu_hash_64(const uint32_t threads, uint64_t* __restrict__ g_hash, int *order)
+void quark_skein512_gpu_hash_64(const uint32_t threads, uint64_t* __restrict__ g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -763,7 +763,7 @@ void quark_skein512_gpu_hash_64(const uint32_t threads, uint64_t* __restrict__ g
 
 __host__
 //void quark_skein512_cpu_hash_64(int thr_id,uint32_t threads, uint32_t *d_nonceVector, uint32_t *d_hash)
-void quark_skein512_cpu_hash_64(int thr_id, const uint32_t threads, uint32_t *d_hash, int *order)
+void quark_skein512_cpu_hash_64(int thr_id, const uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 	uint32_t tpb = TPB52;
 	int dev_id = device_map[thr_id];
@@ -771,7 +771,7 @@ void quark_skein512_cpu_hash_64(int thr_id, const uint32_t threads, uint32_t *d_
 	if (device_sm[dev_id] <= 500) tpb = TPB50;
 	const dim3 grid((threads + tpb-1)/tpb);
 	const dim3 block(tpb);
-	quark_skein512_gpu_hash_64 << <grid, block>> >(threads, (uint64_t*)d_hash, order);
+	quark_skein512_gpu_hash_64 << <grid, block >> >(threads, (uint64_t*)d_hash, (volatile int*)order);
 //	if (thr_id < MAX_GPUS)
 //		quark_skein512_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> >(threads, (uint64_t*)d_hash, order);
 //	else
@@ -788,7 +788,7 @@ __launch_bounds__(TPB52, 3)
 #else
 __launch_bounds__(TPB50, 5)
 #endif
-void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output64, int *order)
+void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output64, volatile int *order)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -954,7 +954,7 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *outp
 }
 
 __host__
-void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int *order)
+void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, volatile int *order)
 {
 	uint32_t tpb = TPB52;
 	int dev_id = device_map[thr_id];

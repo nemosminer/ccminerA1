@@ -304,7 +304,7 @@ void x16_echo512_setBlock_80(int thr_id, void *endiandata)
 }
 
 __global__ __launch_bounds__(128, 7) /* will force 72 registers */
-void x16_echo512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint64_t *g_hash, int *order)
+void x16_echo512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint64_t *g_hash, volatile int *order)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -328,7 +328,7 @@ void x16_echo512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint64_t *g_
 }
 
 __host__
-void x16_echo512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, int *order)
+void x16_echo512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 128;
 

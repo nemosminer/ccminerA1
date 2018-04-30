@@ -216,7 +216,7 @@ static void Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
 /***************************************************/
 
 __global__
-void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *zombie_pigman)
+void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *zombie_pigman)
 {
 #ifdef A1MIN3R_MOD
 	if (*zombie_pigman) { return; }
@@ -234,6 +234,10 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *zombie
 
 		Update32(x, &Hash[0]);
 		Update32(x, &Hash[8]);
+#ifdef A1MIN3R_MOD
+		if (*zombie_pigman) { return; }
+#endif
+
 
 		// Padding Block
 		uint32_t last[8];
@@ -247,7 +251,7 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *zombie
 }
 
 __host__
-void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *zomebie_pigman)
+void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *zomebie_pigman)
 {
 	const uint32_t threadsperblock = 256;
 
@@ -256,7 +260,7 @@ void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash,
 
 	size_t shared_size = 0;
 
-	x11_cubehash512_gpu_hash_64 << <grid, block, shared_size>> >(threads, (uint64_t*)d_hash, zomebie_pigman);
+	x11_cubehash512_gpu_hash_64 << <grid, block, shared_size >> >(threads, (uint64_t*)d_hash, (volatile int*)zomebie_pigman);
 //	if (thr_id < MAX_GPUS)
 //		x11_cubehash512_gpu_hash_64 << <grid, block, shared_size, streamk[thr_id] >> >(threads, (uint64_t*)d_hash, zomebie_pigman);
 //	else
@@ -284,7 +288,7 @@ void cubehash512_setBlock_80(int thr_id, uint32_t* endiandata)
 }
 
 __global__
-void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint64_t *g_outhash, int *order)
+void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint64_t *g_outhash, volatile int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -323,7 +327,7 @@ void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce,
 }
 
 __host__
-void cubehash512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
+void cubehash512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);

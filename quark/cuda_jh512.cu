@@ -277,7 +277,7 @@ static void E8(uint32_t x[8][4])
 
 __global__
 //__launch_bounds__(256,2)
-void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, int *order)
+void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -330,6 +330,10 @@ void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, int *orde
 
 		x[0][0] ^= 0x80U;
 		x[3][3] ^= 0x00020000U;
+#ifdef A1MIN3R_MOD
+		if (*order) { return; }
+#endif
+
 
 		E8(x);
 
@@ -344,13 +348,13 @@ void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, int *orde
 }
 
 __host__
-void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
+void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	quark_jh512_gpu_hash_64 << <grid, block>> >(threads, d_hash, order);
+	quark_jh512_gpu_hash_64 << <grid, block >> >(threads, d_hash, (volatile int*)order);
 #if 0
 	if (thr_id < MAX_GPUS)
 		quark_jh512_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> >(threads, d_hash, order);
@@ -453,7 +457,7 @@ __constant__ static uint32_t c_JHState[32];
 __constant__ static uint32_t c_Message[4];
 
 __global__
-void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash, int *order)
+void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash, volatile int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -503,7 +507,7 @@ void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint3
 }
 
 __host__
-void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
+void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);

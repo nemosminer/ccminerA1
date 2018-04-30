@@ -90,7 +90,7 @@ __global__
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(256, 1)
 #endif
-void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint2* g_hash, int *order)
+void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint2* g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -658,12 +658,12 @@ __global__ void quark_blake512_gpu_hash_80_sp(uint32_t, uint32_t startNounce, ui
 #endif
 
 __host__
-void quark_blake512_cpu_hash_64_sp(int thr_id, uint32_t threads, uint32_t *d_outputHash, int *order)
+void quark_blake512_cpu_hash_64_sp(int thr_id, uint32_t threads, uint32_t *d_outputHash, volatile int *order)
 {
 	const uint32_t threadsperblock = 32;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-	quark_blake512_gpu_hash_64_sp << <grid, block>> >(threads, (uint2*)d_outputHash, order);
+	quark_blake512_gpu_hash_64_sp << <grid, block >> >(threads, (uint2*)d_outputHash, (volatile int*)order);
 //	if (thr_id < MAX_GPUS)
 //		quark_blake512_gpu_hash_64_sp << <grid, block, 0, streamk[thr_id] >> >(threads, (uint2*)d_outputHash, order);
 //	else

@@ -439,7 +439,7 @@ void x16_hamsi512_setBlock_80(int thr_id, void *pdata)
 }
 
 __global__
-void x16_hamsi512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash, int *order)
+void x16_hamsi512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t *g_hash, volatile int *order)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -547,7 +547,7 @@ void x16_hamsi512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce,
 }
 
 __host__
-void x16_hamsi512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
+void x16_hamsi512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 128;
 

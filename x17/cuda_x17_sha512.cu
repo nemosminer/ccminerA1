@@ -29,6 +29,8 @@
 */
 #include <stdio.h>
 
+#include "miner.h"
+
 #define NEED_HASH_512
 
 //#include "cuda_helper.h"
@@ -90,7 +92,7 @@ uint64_t Tone(uint64_t* K, uint64_t* r, uint64_t* W, const int a, const int i)
 
 __global__
 /*__launch_bounds__(256, 4)*/
-void x17_sha512_gpu_hash_64(const uint32_t threads, uint64_t *g_hash, int *order)
+void x17_sha512_gpu_hash_64(const uint32_t threads, uint64_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 //	if (*order) { return; }
@@ -164,14 +166,14 @@ void x17_sha512_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
+void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	x17_sha512_gpu_hash_64 << <grid, block>> > (threads, (uint64_t*)d_hash, order);
+	x17_sha512_gpu_hash_64 << <grid, block >> > (threads, (uint64_t*)d_hash, (volatile int*)order);
 //	x17_sha512_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> > (threads, (uint64_t*)d_hash, order);
 }
 
@@ -236,7 +238,7 @@ void x16_sha512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, u
 }
 
 __host__
-void x16_sha512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
+void x16_sha512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 256;
 

@@ -588,7 +588,7 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 /***************************************************/
 
 __global__ __launch_bounds__(TPB, 4)
-void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp4, int *order)
+void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp4, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -613,7 +613,7 @@ void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp
 }
 
 __global__ __launch_bounds__(TPB, 1)
-void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order)
+void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, volatile int *order)
 {
 	if (*order) return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -625,7 +625,7 @@ void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_f
 }
 
 __global__ __launch_bounds__(TPB, 1)
-void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_state, int *order)
+void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_state, volatile int *order)
 {
 	if (*order) return;
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -636,7 +636,7 @@ void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_s
 }
 
 __global__ __launch_bounds__(TPB, 2)
-void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order)
+void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -651,7 +651,7 @@ void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uin
 }
 
 __global__ __launch_bounds__(TPB, 2)
-void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order)
+void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, volatile int *order)
 { 
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -665,11 +665,11 @@ void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4,
 }
 
 #else
-__global__ void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp4, int *order) {}
-__global__ void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order) {}
-__global__ void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_state, int *order) {}
-__global__ void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order) {}
-__global__ void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, int *order) {}
+__global__ void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp4, volatile int *order) {}
+__global__ void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, volatile int *order) {}
+__global__ void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_state, volatile int *order) {}
+__global__ void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, volatile int *order) {}
+__global__ void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state, volatile int *order) {}
 #endif /* SM3+ */
 
 __host__
@@ -728,7 +728,7 @@ void x11_simd512_cpu_free(int thr_id)
 }
 
 __host__
-void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
+void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = TPB;
 //	int dev_id = device_map[thr_id];
@@ -743,11 +743,11 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int
 
 	x11_simd512_gpu_final_64 << <grid, block, 0, streamk[thr_id] >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
 #elif 1
-	x11_simd512_gpu_expand_64 << <gridX8, block>> > (threads, d_hash, d_temp4[thr_id], order);
+	x11_simd512_gpu_expand_64 << <gridX8, block >> > (threads, d_hash, d_temp4[thr_id], (volatile int*)order);
 
-	x11_simd512_gpu_compress_64_maxwell << < grid, block>> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+	x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], (volatile int*)order);
 
-	x11_simd512_gpu_final_64 << <grid, block>> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], order);
+	x11_simd512_gpu_final_64 << <grid, block >> > (threads, d_hash, d_temp4[thr_id], d_state[thr_id], (volatile int*)order);
 #elif 0
 	if (thr_id < MAX_GPUS)
 	{

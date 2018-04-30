@@ -96,7 +96,7 @@ static void keccak_block(uint2 *s)
 }
 
 __global__
-void quark_keccak512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, int *order)
+void quark_keccak512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
@@ -238,7 +238,7 @@ void quark_keccak512_gpu_hash_64_v30(uint32_t threads, uint64_t *g_hash, int *or
 }
 
 __host__
-void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int *order)
+void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = 256;
 
@@ -249,7 +249,7 @@ void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash,
 
 //	if (device_sm[dev_id] >= 320)
 
-	quark_keccak512_gpu_hash_64 << <grid, block>> >(threads, (uint64_t*)d_hash, order);
+	quark_keccak512_gpu_hash_64 << <grid, block >> >(threads, (uint64_t*)d_hash, (volatile int*)order);
 //	if (thr_id < MAX_GPUS)
 //		quark_keccak512_gpu_hash_64 << <grid, block, 0, streamk[thr_id] >> >(threads, (uint64_t*)d_hash, order);
 //	else
@@ -262,7 +262,7 @@ void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash,
 
 void jackpot_keccak512_cpu_init(int thr_id, uint32_t threads);
 void jackpot_keccak512_cpu_setBlock(int thr_id, void *pdata, size_t inlen);
-void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int *order);
+void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, volatile int *order);
 
 __host__
 void quark_keccak512_cpu_init(int thr_id, uint32_t threads)
@@ -282,7 +282,7 @@ void keccak512_setBlock_80(int thr_id, uint32_t *endiandata)
 }
 
 __host__
-void keccak512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, int *order)
+void keccak512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash, volatile int *order)
 {
 	jackpot_keccak512_cpu_hash(thr_id, threads, startNounce, d_hash, order);
 }

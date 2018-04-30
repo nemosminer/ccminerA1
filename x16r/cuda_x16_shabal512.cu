@@ -343,7 +343,7 @@ void x16_shabal512_gpu_hash_80(uint32_t threads, const uint32_t startNonce, uint
 }
 
 __host__
-void x16_shabal512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, int *order)
+void x16_shabal512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, volatile int *order)
 {
 	const uint32_t threadsperblock = TPB_SHABAL;
 
