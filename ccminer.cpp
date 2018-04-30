@@ -1972,7 +1972,7 @@ void sig_fn(int sig)
 }
 */
 uint64_t opt_seq = 0x67452301EFCDAB89;
-#define X16R_BLOCKTIME_GUESS 600
+#define X16R_BLOCKTIME_GUESS 1200
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -2049,7 +2049,7 @@ static void *miner_thread(void *userdata)
 		unsigned long hashes_done;
 		uint32_t start_nonce;
 		uint32_t scan_time = have_longpoll ? LP_SCANTIME : opt_scantime;
-		uint64_t max64, minmax = 0x100000;
+		uint64_t max64, minmax = 0x100000;//0x100000;
 		int nodata_check_oft = 0;
 		bool regen = false;
 
@@ -2560,7 +2560,8 @@ static void *miner_thread(void *userdata)
 				double dtime = (double)diff.tv_sec + 1e-6 * diff.tv_usec;
 				gpulog(LOG_INFO, thr_id, "Job switch (%f)", dtime);
 			}
-//			work_done = 1;
+			if (g_work_time)
+				work_done = 1;
 			continue;
 		}
 		else if (rc == -128)

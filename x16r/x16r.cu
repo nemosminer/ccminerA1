@@ -815,7 +815,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		else
 		{
 
-			if (!g_work_signal && throughput >= ((max_nonce - pdata[19]) >> 1))
+			if (!g_work_signal && throughput >= ((max_nonce - pdata[19]) >> 2))
 			{
 				g_work_time = 0;
 //				gpulog(LOG_INFO, thr_id, "G_WORK3");
