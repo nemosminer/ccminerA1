@@ -273,7 +273,7 @@ uint32_t cuda_check_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, 
 	}
 
 	cuda_checkhash_32 <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNonces[thr_id]);
-	cudaThreadSynchronize();
+	cudaDeviceSynchronize();
 
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return h_resNonces[thr_id][0];
@@ -418,7 +418,7 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-	cudaThreadSynchronize();
+	cudaDeviceSynchronize();
 	result = *h_resNonces[thr_id];
 
 	return result;
@@ -428,9 +428,10 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 int cuda_arch[MAX_GPUS] = { 0 };
 __global__ void nvcc_get_arch(int *d_version)
 {
-	*d_version = 0;
 #ifdef __CUDA_ARCH__
 	*d_version = __CUDA_ARCH__;
+#else
+	*d_version = 0;
 #endif
 }
 

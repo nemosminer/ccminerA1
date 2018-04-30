@@ -177,8 +177,10 @@ static inline void swab256(void *dest_p, const void *src_p)
 #if !HAVE_DECL_BE32DEC
 static inline uint32_t be32dec(const void *pp)
 {
-	return ((*(uint32_t*)pp & 0xff000000) >> 24) | ((*(uint32_t*)pp & 0xff0000) >> 8) |
-		((*(uint32_t*)pp & 0xff00) << 8) | ((*(uint32_t*)pp) << 24);
+//	return ((*(uint32_t*)pp & 0xff000000) >> 24) | ((*(uint32_t*)pp & 0xff0000) >> 8) |
+//		((*(uint32_t*)pp & 0xff00) << 8) | ((*(uint32_t*)pp) << 24);
+
+	return (*(uint32_t*)pp >> 24) | ((*(uint32_t*)pp << 8) & 0x00ff0000) | ((*(uint32_t*)pp >> 8) & 0x0000ff00) | (*(uint32_t*)pp << 24);
 
 //	const uint8_t *p = (uint8_t const *)pp;
 //	return ((uint32_t)(p[3]) + ((uint32_t)(p[2]) << 8) +

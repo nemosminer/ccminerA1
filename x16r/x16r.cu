@@ -371,15 +371,15 @@ void target_throughput(uint64_t target, uint32_t &throughput)
 //	applog(LOG_DEBUG, "%d >> 4 = %d", avg, avg >> 4);
 	int ratio;
 	if (throughput >= 1 << 25)
-		ratio = 32;
+		ratio = 36;
 	else if (throughput >= 1 << 24)
-		ratio = 32;
+		ratio = 36;
 	else if (throughput >= 1 << 23)
-		ratio = 32;
+		ratio = 36;
 	else if (throughput >= 1 << 22)
-		ratio = 32;
+		ratio = 36;
 	else if (throughput >= 1 << 21)
-		ratio = 32;
+		ratio = 36;
 	else if (throughput >= 1 << 20)
 		ratio = 36;
 	else if (throughput >= 1 << 19)
@@ -502,6 +502,7 @@ extern volatile time_t g_work_time;
 
 static uint64_t tlast[MAX_GPUS] = { 0 };
 
+
 extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, uint64_t seq)
 {
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21) + BOOST;
@@ -510,6 +511,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	const uint32_t first_nonce = pdata[19];
 	const int dev_id = device_map[thr_id];
 	static uint32_t compute_throughput;
+	static int retry_target = 0;
 	if (pdata[19] == max_nonce)
 	{
 		if (seq == ~0ULL)
@@ -520,16 +522,6 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	//	if (strstr(device_name[dev_id], "GTX 1080")) intensity = 20;
 	//	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21);
 	int g_work_signal = 0;
-
-	throughput = min(throughput, max_nonce - first_nonce);
-	/*
-	if (throughput >= ((max_nonce - first_nonce) >> 1))
-	{
-		if (seq == ~0ULL)
-			*hashes_done = pdata[19] - first_nonce + throughput;
-		return -128; // free hashes
-	}
-	*/
 	uint32_t _ALIGN(64) endiandata[20];
 
 	if (opt_benchmark) {
@@ -550,6 +542,35 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 
 	for (int k = 0; k < 19; k++)
 		be32enc(&endiandata[k], pdata[k]);
+
+	if (tlast[thr_id] != (*(uint64_t*)&endiandata[1]))
+	{
+		if (!thr_id)
+		{
+
+			target_throughput(*(uint64_t*)&endiandata[1], throughput);
+			applog(LOG_INFO, "[%08X%08X] (%08X) (%f)", endiandata[2], endiandata[1], swab32(pdata[17]), throughput2intensity(throughput));
+			tlast[0] = (*(uint64_t*)&endiandata[1]);
+		}
+		else
+		{
+			tlast[thr_id] = (*(uint64_t*)&endiandata[1]);
+			target_throughput(*(uint64_t*)&endiandata[1], throughput);
+		}
+		compute_throughput = throughput;
+		throughput = min(throughput, max_nonce - first_nonce);
+	}
+	else
+		throughput = min(compute_throughput, max_nonce - first_nonce);
+
+	/*
+	if (throughput >= ((max_nonce - first_nonce) >> 1))
+	{
+		if (seq == ~0ULL)
+			*hashes_done = pdata[19] - first_nonce + throughput;
+		return -128; // free hashes
+	}
+	*/
 
 	uint8_t algo80;
 
@@ -622,36 +643,6 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		x16_sha512_setBlock_80(thr_id, endiandata);
 		break;
 	}
-	/*
-		if (s_ntime != ntime) {
-		s_ntime = ntime;
-		if (!thr_id && (!tlast[thr_id] || tlast[thr_id] != (*(uint64_t*)&endiandata[1])))
-		applog(LOG_INFO, "hash order %X%X (%08x)", endiandata[2], endiandata[1], ntime);
-		}
-		*/
-	if (tlast[thr_id] != (*(uint64_t*)&endiandata[1]))
-	{
-		if (!thr_id)
-		{
-			target_throughput(*(uint64_t*)&endiandata[1], throughput);
-		}
-		else
-		{
-			tlast[thr_id] = (*(uint64_t*)&endiandata[1]);
-			target_throughput(*(uint64_t*)&endiandata[1], throughput);
-		}
-		compute_throughput = throughput;
-	}
-	else
-		throughput = compute_throughput;
-
-	uint32_t ntime = swab32(pdata[17]);
-
-	if (!thr_id && (!tlast[0] || tlast[0] != (*(uint64_t*)&endiandata[1]))) 
-	{
-		applog(LOG_INFO, "[%08X%08X] (%08X) (%f)", endiandata[2], endiandata[1], ntime, throughput2intensity(throughput));
-		tlast[0] = (*(uint64_t*)&endiandata[1]);
-	}
 
 //	work->nonces[0] = UINT32_MAX;
 	int warn = 0;
@@ -674,8 +665,6 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (13 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (14 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (15 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
-
-		//		run_x16r_rounds(&endiandata[1], thr_id, throughput, pdata[19], d_hash[thr_id]);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 

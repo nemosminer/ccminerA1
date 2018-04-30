@@ -883,7 +883,8 @@ static bool send_line(curl_socket_t sock, char *s)
 {
 	ssize_t len, sent = 0;
 	
-	len = (ssize_t)strlen(s);
+//	len = (ssize_t)strlen(s);
+	len = (ssize_t)strnlen(s, 512);
 	s[len++] = '\n';
 
 	while (len > 0) {

@@ -689,26 +689,28 @@ static void calc_network_diff(struct work *work)
 		return;
 	}
 #endif
-	uint32_t bits = (nbits & 0xffffff);
-	int16_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 
-	uint64_t diffone = 0x0000FFFF00000000ull;
-	/*
+	uint32_t bits = (nbits & 0xffffff);
+	int16_t shift = nbits >> 24; //(swab32(nbits) & 0xff); // 0x1c = 28
+
+//	uint64_t diffone = 0x0000FFFF00000000ull;
+
+
 	double d = (double)0x0000ffff / (double)bits;
 
 	for (int m=shift; m < 29; m++) d *= 256.0;
 	for (int m=29; m < shift; m++) d /= 256.0;
-	*/
 
-	uint32_t d = 0x0000ffff / bits;
 
-	for (int m = shift; m < 29; m++) d <<= 8;
-	for (int m = 29; m < shift; m++) d >>= 8;
+//	uint32_t d = 0x0000ffff / bits;
+
+//	for (int m = shift; m < 29; m++) d <<= 8;
+//	for (int m = 29; m < shift; m++) d >>= 8;
 
 	//	if (opt_algo == ALGO_DECRED && shift == 28) d *= 256.0;
 	if (opt_debug_diff)
-		applog(LOG_DEBUG, "net diff: %u -> shift %u, bits %08x", d, shift, bits);
-//		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
+//		applog(LOG_DEBUG, "net diff: %u -> shift %u, bits %08x", d, shift, bits);
+		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
 
 	net_diff = (double)d;
 }
@@ -1970,7 +1972,7 @@ void sig_fn(int sig)
 }
 */
 uint64_t opt_seq = 0x67452301EFCDAB89;
-#define X16R_BLOCKTIME_GUESS 5
+#define X16R_BLOCKTIME_GUESS 6
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
