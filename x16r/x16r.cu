@@ -328,7 +328,7 @@ __global__ void set_lo(int *ark)
 #define MID_SPEED 1
 #define LOW_SPEED 3
 #define MIN_SPEED 6
-#define SIMD_MAX (1 << 20)
+#define SIMD_MAX (1 << 21)
 uint8_t target_table[16] =
 {
 	//18 ,21 ,2.5,8 ,24 ,27 ,13,7.5,8 ,3.5,4 ,5 ,6.5,39,7 ,28.5
@@ -337,22 +337,22 @@ uint8_t target_table[16] =
 	//6,5,9,8,5,3,7,8,8,9,9,9,9, 0,8,3
 	//3,2,4,4,2,1,3,4,4,4,4,4,4, 0,4,1
 
-	6,//TOP_SPEED,	//18.0 > 14 //60
-	5,//TOP_SPEED,	//21.5 > 15 //71
-	9,//MIN_SPEED,	//2.4  > 14 //7.8
-	8,//MID_SPEED,	//8.1  > 13 //24.7
-	5,//TOP_SPEED,	//24.3 > 18 //66.00
-	3,//TOP_SPEED,	//27.1 > 18 //71.5
-	7,//MID_SPEED,	//13   > 18 //32.1
-	8,//LOW_SPEED,	//7.4  > 18 //17
-	8,//LOW_SPEED,	//8    > 18 //14.82
-	9,//MIN_SPEED,	//3.5  > 18 //6.08
-	9,//LOW_SPEED,	//4    > 18 //8.7
-	9,//LOW_SPEED,	//5.1  > 18 //10.6
-	9,//LOW_SPEED,	//6.7  > 19 //11.6
+	2,//TOP_SPEED,	//18.0 > 14 //60
+	1,//TOP_SPEED,	//21.5 > 15 //71
+	3,//MIN_SPEED,	//2.4  > 14 //7.8
+	3,//MID_SPEED,	//8.1  > 13 //24.7
+	1,//TOP_SPEED,	//24.3 > 18 //66.00
+	0,//TOP_SPEED,	//27.1 > 18 //71.5
+	2,//MID_SPEED,	//13   > 18 //32.1
+	3,//LOW_SPEED,	//7.4  > 18 //17
+	3,//LOW_SPEED,	//8    > 18 //14.82
+	3,//MIN_SPEED,	//3.5  > 18 //6.08
+	3,//LOW_SPEED,	//4    > 18 //8.7
+	3,//LOW_SPEED,	//5.1  > 18 //10.6
+	3,//LOW_SPEED,	//6.7  > 19 //11.6
 	0,//TOP_SPEED,	//39   > 18 //115
-	8,//LOW_SPEED,	//7.0  > 21 //15.8
-	3//TOP_SPEED	//28.5 > 18 //71
+	3,//LOW_SPEED,	//7.0  > 21 //15.8
+	0//TOP_SPEED	//28.5 > 18 //71
 };
 
 void target_throughput(uint64_t target, uint32_t &throughput)
@@ -371,15 +371,15 @@ void target_throughput(uint64_t target, uint32_t &throughput)
 //	applog(LOG_DEBUG, "%d >> 4 = %d", avg, avg >> 4);
 	int ratio;
 	if (throughput >= 1 << 25)
-		ratio = 36;
+		ratio = 16;
 	else if (throughput >= 1 << 24)
-		ratio = 36;
+		ratio = 20;
 	else if (throughput >= 1 << 23)
-		ratio = 36;
+		ratio = 24;
 	else if (throughput >= 1 << 22)
-		ratio = 36;
+		ratio = 28;
 	else if (throughput >= 1 << 21)
-		ratio = 36;
+		ratio = 32;
 	else if (throughput >= 1 << 20)
 		ratio = 36;
 	else if (throughput >= 1 << 19)
@@ -414,17 +414,17 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 
 //		CUDA_SAFE_CALL(cudaMalloc(&d_ark[thr_id], sizeof(int)));
 		*h_ark[thr_id] = 0;
-		if (thr_id == 0)
+//		if (thr_id == 0)
 		{
 //			CUDA_SAFE_CALL(cudaStreamCreate(&streamx[0]));
-			CUDA_SAFE_CALL(cudaStreamCreate(&streamk[0]));
+//			CUDA_SAFE_CALL(cudaStreamCreate(&streamk[0]));
 //			CUDA_SAFE_CALL(cudaStreamCreateWithPriority(&streamk[0], 0, 0));
-			CUDA_SAFE_CALL(cudaStreamCreateWithPriority(&streamx[0], cudaStreamNonBlocking, -1));
+			CUDA_SAFE_CALL(cudaStreamCreateWithPriority(&streamx[thr_id], cudaStreamNonBlocking, -1));
 		}
-		else
+//		else
 		{
-			while (h_ark[0] == NULL)
-				sleep(1);
+//			while (h_ark[0] == NULL)
+//				sleep(1);
 		}
 //		set_lo << <1, 1 >> >(d_ark[thr_id]);
 		CUDA_SAFE_CALL(cudaMemcpy(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int)*16, cudaMemcpyHostToDevice));
@@ -649,7 +649,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 
 	do {
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id], d_ark[thr_id]);
-//		cudaStreamSynchronize(streamx[0]);
+		cudaStreamSynchronize(streamx[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (3 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
@@ -817,8 +817,8 @@ extern "C" void free_x16r(int thr_id)
 	cudaThreadSynchronize();
 //	ark_reset(thr_id);
 	cudaFree(d_hash[thr_id]);
-	cudaStreamDestroy(streamk[0]);
-	cudaStreamDestroy(streamx[0]);
+//	cudaStreamDestroy(streamk[0]);
+	cudaStreamDestroy(streamx[thr_id]);
 
 	quark_blake512_cpu_free(thr_id);
 	quark_groestl512_cpu_free(thr_id);
@@ -867,16 +867,17 @@ void ark_init(int thr_id)
 __host__ void ark_switch(int thr_id)
 {
 //	while (q < thr_id) sleep(1);
-	if (init_items[thr_id] && (*h_ark[thr_id] == 0))
+	if (init_items[thr_id]) //&& (*h_ark[thr_id] == 0))
 	{
-		cudaSetDevice(device_map[thr_id]);
+//		cudaSetDevice(device_map[thr_id]);
 //		set_hi << <1, 1, 0, streamx[0]>> >(d_ark[thr_id]);
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[0]));
 //		if (*h_ark[thr_id] == 0)
 		{
 			*h_ark[thr_id] = 1;
 #ifdef A1MIN3R_MOD
-			CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamx[0]));
+			CUDA_SAFE_CALL(cudaMemsetAsync(d_ark[thr_id], 1, 1, streamx[thr_id]));
+//			CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamx[0]));
 #endif
 		}
 //		else
@@ -900,13 +901,14 @@ __host__ int ark_reset(int thr_id)
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[thr_id]));
 		*h_ark[thr_id] = 0;
 #ifdef A1MIN3R_MOD
-		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, 0));
+		CUDA_SAFE_CALL(cudaMemsetAsync(d_ark[thr_id], 0, 1, 0));
+//		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, 0));
 #endif
 		return 1;
 	}
-#ifdef A1MIN3R_MOD
 	else
-		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, 0));
+#ifdef A1MIN3R_MOD
+//				CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, 0));
 #endif
 	//		pthread_mutex_unlock(&ark_lock);
 //	CUDA_SAFE_CALL(cudaStreamSynchronize(streamx[thr_id]));

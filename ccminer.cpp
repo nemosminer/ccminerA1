@@ -1972,7 +1972,7 @@ void sig_fn(int sig)
 }
 */
 uint64_t opt_seq = 0x67452301EFCDAB89;
-#define X16R_BLOCKTIME_GUESS 6
+#define X16R_BLOCKTIME_GUESS 600
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -2169,7 +2169,7 @@ static void *miner_thread(void *userdata)
 				memcpy(&work, &g_work, sizeof(struct work));
 				pthread_mutex_unlock(&g_work_lock);
 				nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
-				thr_hashrates[thr_id] /= 3.0;
+//				thr_hashrates[thr_id] /= 3.0;
 //				nonceptr[0] = t;
 //				gpulog(LOG_NOTICE, thr_id, "job update");
 			}
