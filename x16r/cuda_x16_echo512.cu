@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <memory.h>
+#include "miner.h"
 
 #include "cuda_helper_alexis.h"
 //#include "cuda_helper.h"

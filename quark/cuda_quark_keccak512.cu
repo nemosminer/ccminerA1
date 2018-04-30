@@ -2,6 +2,7 @@
 #include <memory.h>
 #include <sys/types.h> // off_t
 
+#include "miner.h"
 //#include "cuda_helper.h"
 #include "cuda_helper_alexis.h"
 

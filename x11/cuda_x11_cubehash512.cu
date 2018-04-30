@@ -1,5 +1,6 @@
 //#include <cuda_helper.h>
 //#include <cuda_vectors.h>
+#include "miner.h"
 #include "cuda_helper_alexis.h"
 #include "cuda_vectors_alexis.h"
 /* Alexis78 64 round kernel implementation */

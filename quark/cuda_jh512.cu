@@ -4,6 +4,7 @@
  * JH80 by tpruvot - 2017 - under GPLv3
  **/
 //#include <cuda_helper.h>
+#include "miner.h"
 #include "cuda_helper_alexis.h"
 
 // #include <stdio.h>  // printf

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <memory.h>
+#include "miner.h"
 
 #define WANT_BMW512_80
 

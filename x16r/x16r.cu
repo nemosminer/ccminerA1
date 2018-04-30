@@ -329,7 +329,7 @@ __global__ void set_lo(int *ark)
 #define MID_SPEED 1
 #define LOW_SPEED 3
 #define MIN_SPEED 6
-#define SIMD_MAX (1 << 21)
+#define SIMD_MAX (1 << 19)
 uint8_t target_table[16] =
 {
 	//18 ,21 ,2.5,8 ,24 ,27 ,13,7.5,8 ,3.5,4 ,5 ,6.5,39,7 ,28.5
@@ -338,23 +338,25 @@ uint8_t target_table[16] =
 	//6,5,9,8,5,3,7,8,8,9,9,9,9, 0,8,3
 	//3,2,4,4,2,1,3,4,4,4,4,4,4, 0,4,1
 
-	2,//TOP_SPEED,	//18.0 > 14 //60
-	1,//TOP_SPEED,	//21.5 > 15 //71
-	3,//MIN_SPEED,	//2.4  > 14 //7.8
-	3,//MID_SPEED,	//8.1  > 13 //24.7
-	1,//TOP_SPEED,	//24.3 > 18 //66.00
-	0,//TOP_SPEED,	//27.1 > 18 //71.5
-	2,//MID_SPEED,	//13   > 18 //32.1
-	3,//LOW_SPEED,	//7.4  > 18 //17
-	3,//LOW_SPEED,	//8    > 18 //14.82
-	3,//MIN_SPEED,	//3.5  > 18 //6.08
-	3,//LOW_SPEED,	//4    > 18 //8.7
-	3,//LOW_SPEED,	//5.1  > 18 //10.6
-	3,//LOW_SPEED,	//6.7  > 19 //11.6
+	6,//TOP_SPEED,	//18.0 > 14 //60
+	5,//TOP_SPEED,	//21.5 > 15 //71
+	9,//MIN_SPEED,	//2.4  > 14 //7.8
+	8,//MID_SPEED,	//8.1  > 13 //24.7
+	5,//TOP_SPEED,	//24.3 > 18 //66.00
+	3,//TOP_SPEED,	//27.1 > 18 //71.5
+	7,//MID_SPEED,	//13   > 18 //32.1
+	8,//LOW_SPEED,	//7.4  > 18 //17
+	8,//LOW_SPEED,	//8    > 18 //14.82
+	9,//MIN_SPEED,	//3.5  > 18 //6.08
+	9,//LOW_SPEED,	//4    > 18 //8.7
+	9,//LOW_SPEED,	//5.1  > 18 //10.6
+	9,//LOW_SPEED,	//6.7  > 19 //11.6
 	0,//TOP_SPEED,	//39   > 18 //115
-	3,//LOW_SPEED,	//7.0  > 21 //15.8
-	0//TOP_SPEED	//28.5 > 18 //71
+	8,//LOW_SPEED,	//7.0  > 21 //15.8
+	3//TOP_SPEED	//28.5 > 18 //71
 };
+
+static uint32_t max_throughput = 0;
 
 void target_throughput(uint64_t target, uint32_t &throughput)
 {
@@ -371,7 +373,19 @@ void target_throughput(uint64_t target, uint32_t &throughput)
 	}
 //	applog(LOG_DEBUG, "%d >> 4 = %d", avg, avg >> 4);
 	int ratio;
-	if (throughput >= 1 << 25)
+	if (throughput >= 1 << 31)
+		ratio = 10;
+	if (throughput >= 1 << 30)
+		ratio = 11;
+	if (throughput >= 1 << 29)
+		ratio = 12;
+	else if (throughput >= 1 << 28)
+		ratio = 13;
+	else if (throughput >= 1 << 27)
+		ratio = 14;
+	else if (throughput >= 1 << 26)
+		ratio = 15;
+	else if (throughput >= 1 << 25)
 		ratio = 16;
 	else if (throughput >= 1 << 24)
 		ratio = 20;
@@ -391,12 +405,14 @@ void target_throughput(uint64_t target, uint32_t &throughput)
 		ratio = 48;
 	else
 		ratio = avg | 1;
+
 	avg += (-avg % ratio) > 0 ? (-avg % ratio) : -(-avg % ratio);
 	throughput >>= (avg / ratio);
 	throughput += -(int)throughput & 0xfff;
 //	throughput = (t < throughput) ? t : throughput;
 	throughput = (simd && (throughput >(SIMD_MAX))) ? SIMD_MAX : throughput;
 	throughput = (throughput) ? throughput : 0x1000;
+	throughput = (throughput <= max_throughput)? throughput : max_throughput;
 }
 
 extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
@@ -410,6 +426,24 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 			// reduce cpu usage
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync | cudaDeviceMapHost);
 		}
+
+		max_throughput = throughput;
+
+		while (cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput) != cudaSuccess)
+		{
+			throughput >>= 1;
+			throughput -= 0x4000;
+			throughput &= ~0x3fff;
+			if (throughput < (1 << 14))
+				CUDA_CALL_OR_RET_X(cudaErrorMemoryAllocation, 0);
+		}
+		if (max_throughput != throughput)
+			gpulog(LOG_INFO, thr_id, "Intensity adjusted to %g, %u cuda threads", throughput2intensity(throughput - BOOST), throughput - BOOST);
+		else
+			gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput - BOOST), throughput - BOOST);
+
+		max_throughput = throughput;
+
 		CUDA_SAFE_CALL(cudaMallocHost((void **)&h_ark[thr_id], sizeof(int)*16));
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_ark[thr_id], sizeof(int)*16), 0);
 
@@ -439,7 +473,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		pthread_mutex_unlock(&ark_lock);
 
 		//		ark_init(thr_id);
-		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput - BOOST), throughput - BOOST);
+//		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput - BOOST), throughput - BOOST);
 #if 0
 		if (throughput2intensity(throughput - BOOST) > 21) gpulog(LOG_INFO, thr_id, "SIMD throws error on malloc call, TBD if there is a fix");
 #endif
@@ -468,7 +502,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		quark_jh512_cpu_init(thr_id, throughput);
 		quark_keccak512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
-		x11_shavite512_cpu_init(thr_id, throughput);
+//		x11_shavite512_cpu_init(thr_id, throughput);
 		if (throughput > (SIMD_MAX))
 		{
 			if (x11_simd512_cpu_init(thr_id, SIMD_MAX))
@@ -482,7 +516,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 			applog(LOG_WARNING, "SIMD was unable to initialize :( exiting...");
 			exit(-1);
 		}// 64
-		x16_echo512_cuda_init(thr_id, throughput);
+//		x16_echo512_cuda_init(thr_id, throughput);
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
 		x16_fugue512_cpu_init(thr_id, throughput);
@@ -490,7 +524,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		x16_whirlpool512_init(thr_id, throughput);
 		x17_sha512_cpu_init(thr_id, throughput);
 
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput), 0);
+//		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 		cudaGetLastError();

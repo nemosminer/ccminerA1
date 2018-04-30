@@ -3,6 +3,7 @@
 * tpruvot 2018, based on alexis x14 and xevan kernlx code
 */
 
+#include "miner.h"
 #include "cuda_helper_alexis.h"
 #include "cuda_vectors_alexis.h"
 //#include <cuda_helper.h>

@@ -5,6 +5,7 @@
 #define TPB50 256
 
 #include <stdio.h>
+#include "miner.h"
 #include "cuda_vectors_alexis.h"
 //#include "cuda_helper_alexis.h"
 //#include <cuda_vectors.h>

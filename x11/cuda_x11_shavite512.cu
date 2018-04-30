@@ -1,4 +1,5 @@
 #include <memory.h> // memcpy()
+#include "miner.h"
 
 #include "cuda_helper_alexis.h"
 
