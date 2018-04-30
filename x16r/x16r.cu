@@ -329,7 +329,7 @@ __global__ void set_lo(int *ark)
 #define MID_SPEED 1
 #define LOW_SPEED 3
 #define MIN_SPEED 6
-#define SIMD_MAX (1 << 19)
+#define SIMD_MAX (3 << 19)
 uint8_t target_table[16] =
 {
 	//18 ,21 ,2.5,8 ,24 ,27 ,13,7.5,8 ,3.5,4 ,5 ,6.5,39,7 ,28.5

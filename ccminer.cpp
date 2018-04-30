@@ -2560,7 +2560,7 @@ static void *miner_thread(void *userdata)
 				double dtime = (double)diff.tv_sec + 1e-6 * diff.tv_usec;
 				gpulog(LOG_INFO, thr_id, "Job switch (%f)", dtime);
 			}
-			if (g_work_time)
+//			if (g_work_time)
 				work_done = 1;
 			continue;
 		}
