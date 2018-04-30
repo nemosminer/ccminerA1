@@ -35,7 +35,9 @@ static void keccak_block(uint2 *s)
 	size_t i;
 	uint2 t[5], u[5], v, w;
 
-	for (i = 0; i < 24; i++) {
+	for (i = 0; i < 24; i++) 
+	{
+
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
 		t[0] = s[0] ^ s[5] ^ s[10] ^ s[15] ^ s[20];
 		t[1] = s[1] ^ s[6] ^ s[11] ^ s[16] ^ s[21];
@@ -108,19 +110,19 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile in
 		//uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		off_t hashPosition = thread;//nounce - startNounce;
-		uint64_t *inpHash = &g_hash[hashPosition * 8];
+		uint64_t *inpHash = &g_hash[hashPosition << 3];
 		uint2 keccak_gpu_state[25];
-
+#pragma unroll 8
 		for (int i = 0; i<8; i++) {
 			keccak_gpu_state[i] = vectorize(inpHash[i]);
 		}
 		keccak_gpu_state[8] = vectorize(0x8000000000000001ULL);
-
+#pragma unroll 17
 		for (int i=9; i<25; i++) {
 			keccak_gpu_state[i] = make_uint2(0, 0);
 		}
 		keccak_block(keccak_gpu_state);
-
+#pragma unroll 8
 		for(int i=0; i<8; i++) {
 			inpHash[i] = devectorize(keccak_gpu_state[i]);
 		}

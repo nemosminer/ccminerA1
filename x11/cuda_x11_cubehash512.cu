@@ -228,7 +228,7 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile in
 		//uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = thread;//nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
+		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition << 3];
 
 		uint32_t x[2][2][2][2][2];
 		Init(x);
@@ -322,7 +322,7 @@ void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce,
 		if (*order) { return; }
 #endif
 
-		uint32_t* output = (uint32_t*)(&g_outhash[(size_t)8 * thread]);
+		uint32_t* output = (uint32_t*)(&g_outhash[thread << 3]);
 		Final(x, output);
 	}
 }

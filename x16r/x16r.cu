@@ -566,11 +566,11 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		((uint32_t*)pdata)[2] = 0x88888888;
 		//! Should cause vanila v0.1 code to have shavite CPU invalid hash error at various intervals
 		*/
-		((uint32_t*)ptarget)[7] = 0x003f;
-		*((uint64_t*)&pdata[1]) = seq;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
+		((uint32_t*)ptarget)[7] = 0x123f; // 2:64/80 + D:64  broke
+		*((uint64_t*)&pdata[1]) = 0x2222222000000000;//seq;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
 		//		*((uint64_t*)&pdata[1]) = 0xbbbbbbbbbbbbbbbb;//2:64,4:80,8,a,e.. error//44B54B9F248C0708//0x31C8B76F520AEDF4;
 		//489f 4f38 33f4 7016 //01346789f
-		((uint32_t*)pdata)[17] = 0x12345678;
+//		((uint32_t*)pdata)[17] = 0x12345678;
 
 
 	}
@@ -740,8 +740,8 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				char oks80[128] = { 0 };
 				char fails[128] = { 0 };
 				for (int a = 0; a < HASH_FUNC_COUNT; a++) {
-					const char elem = hashOrder[a];
-					const uint8_t algo64 = elem >= 'A' ? elem - 'A' + 10 : elem - '0';
+//					const char elem = hashOrder[a];
+					const uint8_t algo64 = (*(uint64_t*)&endiandata[1] >> 60 - (a * 4)) & 0x0f;//elem >= 'A' ? elem - 'A' + 10 : elem - '0';
 					if (a > 0) algo64_tests[algo64] += work->valid_nonces;
 					sprintf(&oks64[strlen(oks64)], "|%X:%2d", a, algo64_tests[a] < 100 ? algo64_tests[a] : 99);
 					sprintf(&oks80[strlen(oks80)], "|%X:%2d", a, algo80_tests[a] < 100 ? algo80_tests[a] : 99);
@@ -809,6 +809,8 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 			{
 				return -127;
 			}
+			if (throughput < 0x1000)
+				return -127;
 				//	if (work_restart[thr_id].restart) return -127;
 			continue;
 		}

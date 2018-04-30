@@ -1721,14 +1721,14 @@ static void x16_simd512_gpu_80(const uint32_t threads, const uint32_t startNonce
 
 		// simd
 		unsigned char x[128];
-/*
+
 		*(uint2x4*)&x[0 * 32] = *(uint2x4*)&A[0];
 		*(uint2x4*)&x[1 * 32] = *(uint2x4*)&A[8];
 		*(uint4*)&x[2 * 32] = *(uint4*)&A[16];
-*/
-#pragma unroll
-		for (int i = 0; i < 20; i += 2)
-			AS_UINT2(&x[i<<2]) = AS_UINT2(&A[i]);
+//		vectorize(1)
+//#pragma unroll
+//		for (int i = 0; i < 20; i += 2)
+//			AS_UINT2(&x[i<<2]) = AS_UINT2(&A[i]);
 #pragma unroll
 		for (int i = 80; i < 128; i += 4) AS_U32(&x[i]) = 0;
 //#pragma unroll

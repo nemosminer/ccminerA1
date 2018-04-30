@@ -619,7 +619,7 @@ void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_f
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t *Hash = &g_hash[thread * 16];
+		uint32_t *Hash = &g_hash[thread << 4];
 		Compression1(Hash, thread, g_fft4, g_state);
 	}
 }
@@ -644,7 +644,7 @@ void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uin
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t *Hash = &g_hash[thread * 16];
+		uint32_t *Hash = &g_hash[thread << 4];
 		Compression1(Hash, thread, g_fft4, g_state);
 		Compression2(thread, g_fft4, g_state);
 	}
@@ -659,7 +659,7 @@ void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4,
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t *Hash = &g_hash[thread * 16];
+		uint32_t *Hash = &g_hash[thread << 4];
 		Final(Hash, thread, g_fft4, g_state);
 	}
 }

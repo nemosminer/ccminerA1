@@ -670,14 +670,14 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int 
 		tmp[ 7]^= d_ROUND_ELT_LDG(sharedMemory,n, 7, 6, 5, 4, 3, 2, 1, 0);
 		for (int i=1; i <10; i++){
 			TRANSFER(n, tmp);
-			tmp[ 0] = d_ROUND_ELT1_LDG(sharedMemory,n, 0, 7, 6, 5, 4, 3, 2, 1, precomputed_round_key_64[(i-1)*8+0]);
-			tmp[ 1] = d_ROUND_ELT1(    sharedMemory,n, 1, 0, 7, 6, 5, 4, 3, 2, precomputed_round_key_64[(i-1)*8+1]);
-			tmp[ 2] = d_ROUND_ELT1(    sharedMemory,n, 2, 1, 0, 7, 6, 5, 4, 3, precomputed_round_key_64[(i-1)*8+2]);
-			tmp[ 3] = d_ROUND_ELT1_LDG(sharedMemory,n, 3, 2, 1, 0, 7, 6, 5, 4, precomputed_round_key_64[(i-1)*8+3]);
-			tmp[ 4] = d_ROUND_ELT1(    sharedMemory,n, 4, 3, 2, 1, 0, 7, 6, 5, precomputed_round_key_64[(i-1)*8+4]);
-			tmp[ 5] = d_ROUND_ELT1(    sharedMemory,n, 5, 4, 3, 2, 1, 0, 7, 6, precomputed_round_key_64[(i-1)*8+5]);
-			tmp[ 6] = d_ROUND_ELT1(    sharedMemory,n, 6, 5, 4, 3, 2, 1, 0, 7, precomputed_round_key_64[(i-1)*8+6]);
-			tmp[ 7] = d_ROUND_ELT1_LDG(sharedMemory,n, 7, 6, 5, 4, 3, 2, 1, 0, precomputed_round_key_64[(i-1)*8+7]);
+			tmp[0] = d_ROUND_ELT1_LDG(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1, precomputed_round_key_64[((i - 1) << 3) + 0]);
+			tmp[1] = d_ROUND_ELT1(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2, precomputed_round_key_64[((i - 1) << 3) + 1]);
+			tmp[2] = d_ROUND_ELT1(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3, precomputed_round_key_64[((i - 1) << 3) + 2]);
+			tmp[3] = d_ROUND_ELT1_LDG(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4, precomputed_round_key_64[((i - 1) << 3) + 3]);
+			tmp[4] = d_ROUND_ELT1(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5, precomputed_round_key_64[((i - 1) << 3) + 4]);
+			tmp[5] = d_ROUND_ELT1(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6, precomputed_round_key_64[((i - 1) << 3) + 5]);
+			tmp[6] = d_ROUND_ELT1(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7, precomputed_round_key_64[((i - 1) << 3) + 6]);
+			tmp[7] = d_ROUND_ELT1_LDG(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0, precomputed_round_key_64[((i - 1) << 3) + 7]);
 		}
 
 		TRANSFER(h, tmp);

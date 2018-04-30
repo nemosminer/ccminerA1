@@ -386,7 +386,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *
 		Compression512(h, message);
 
 		// fertig
-		uint64_t *outpHash = &g_hash[hashPosition * 8];
+		uint64_t *outpHash = &g_hash[hashPosition << 3];
 
 		#pragma unroll
 		for(int i=0;i<8;i++)
@@ -442,7 +442,7 @@ void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *
 		Compression512(h, message);
 
 		// fertig
-		uint64_t *outpHash = &g_hash[thread * 8];
+		uint64_t *outpHash = &g_hash[thread << 3];
 
 #pragma unroll 8
 		for(int i=0;i<8;i++)

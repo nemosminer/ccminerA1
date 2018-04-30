@@ -26,15 +26,15 @@ __constant__ uint32_t _ALIGN(8) statechainvpre[40];
 }
 
 #define MULT2(a,j) {\
-	tmp = a[7+(8*j)];\
-	a[7+(8*j)] = a[6+(8*j)];\
-	a[6+(8*j)] = a[5+(8*j)];\
-	a[5+(8*j)] = a[4+(8*j)];\
-	a[4+(8*j)] = a[3+(8*j)] ^ tmp;\
-	a[3+(8*j)] = a[2+(8*j)] ^ tmp;\
-	a[2+(8*j)] = a[1+(8*j)];\
-	a[1+(8*j)] = a[0+(8*j)] ^ tmp;\
-	a[0+(8*j)] = tmp;\
+	tmp = a[7+(j<<3)];\
+	a[7+(j<<3)] = a[6+(j<<3)];\
+	a[6+(j<<3)] = a[5+(j<<3)];\
+	a[5+(j<<3)] = a[4+(j<<3)];\
+	a[4+(j<<3)] = a[3+(j<<3)] ^ tmp;\
+	a[3+(j<<3)] = a[2+(j<<3)] ^ tmp;\
+	a[2+(j<<3)] = a[1+(j<<3)];\
+	a[1+(j<<3)] = a[0+(j<<3)] ^ tmp;\
+	a[0+(j<<3)] = tmp;\
 }
 
 #define TWEAK(a0,a1,a2,a3,j)\
@@ -297,12 +297,12 @@ static void rnd512(uint32_t *const __restrict__ statebuffer, uint32_t *const __r
 	for (int j=0;j<5;j++)
 		#pragma unroll 8
 		for(int i=0;i<8;i++)
-			statechainv[i+8*j] ^= t[i+(8*((j+1)%5))];
+			statechainv[i+(j<<3)] ^= t[i+(((j+1)%5)<<3)];
 //		*(uint2x4*)&statechainv[8*j] ^= *(uint2x4*)&t[8*((j+1)%5)];
 
 	#pragma unroll 5
 	for (int j=0;j<5;j++)
-		*(uint2x4*)&t[8*j] = *(uint2x4*)&statechainv[8*j];
+		*(uint2x4*)&t[(j << 3)] = *(uint2x4*)&statechainv[(j << 3)];
 
 	MULT0(statechainv);
 	#pragma unroll 4
@@ -311,11 +311,11 @@ static void rnd512(uint32_t *const __restrict__ statebuffer, uint32_t *const __r
 
 	#pragma unroll 5
 	for (int j=0;j<5;j++)
-		*(uint2x4*)&statechainv[8*j] ^= *(uint2x4*)&t[8*((j+4)%5)];
+		*(uint2x4*)&statechainv[(j << 3)] ^= *(uint2x4*)&t[((j + 4) % 5) << 3];
 
 	#pragma unroll 5
 	for (int j=0;j<5;j++) {
-		*(uint2x4*)&statechainv[8*j] ^= *(uint2x4*)statebuffer;
+		*(uint2x4*)&statechainv[(j << 3)] ^= *(uint2x4*)statebuffer;
 		MULT0(statebuffer);
 	}
 
@@ -325,9 +325,9 @@ static void rnd512(uint32_t *const __restrict__ statebuffer, uint32_t *const __r
 	TWEAK(statechainv[36], statechainv[37], statechainv[38], statechainv[39], 4);
 
 	for (int i = 0; i<8; i++){
-		STEP2( statechainv    ,*(uint2*)&c_CNS[(2 * i) +  0], *(uint2*)&c_CNS[(2 * i) + 16]);
-		STEP2(&statechainv[16],*(uint2*)&c_CNS[(2 * i) + 32], *(uint2*)&c_CNS[(2 * i) + 48]);
-		STEP1(&statechainv[32],*(uint2*)&c_CNS[(2 * i) + 64]);
+		STEP2(statechainv, *(uint2*)&c_CNS[(i << 1) + 0], *(uint2*)&c_CNS[(i << 1) + 16]);
+		STEP2(&statechainv[16], *(uint2*)&c_CNS[(i << 1) + 32], *(uint2*)&c_CNS[(i << 1) + 48]);
+		STEP1(&statechainv[32], *(uint2*)&c_CNS[(i << 1) + 64]);
 	}
 }
 
@@ -348,9 +348,9 @@ static void rnd512_first(uint32_t *const __restrict__ state, uint32_t *const __r
 	TWEAK(state[36], state[37], state[38], state[39], 4);
 	
 	for (int i = 0; i<8; i++) {
-		STEP2(&state[ 0],*(uint2*)&c_CNS[(2 * i) +  0],*(uint2*)&c_CNS[(2 * i) + 16]);
-		STEP2(&state[16],*(uint2*)&c_CNS[(2 * i) + 32],*(uint2*)&c_CNS[(2 * i) + 48]);
-		STEP1(&state[32],*(uint2*)&c_CNS[(2 * i) + 64]);
+		STEP2(&state[ 0],*(uint2*)&c_CNS[(i << 1) +  0],*(uint2*)&c_CNS[(i << 1) + 16]);
+		STEP2(&state[16],*(uint2*)&c_CNS[(i << 1) + 32],*(uint2*)&c_CNS[(i << 1) + 48]);
+		STEP1(&state[32],*(uint2*)&c_CNS[(i << 1) + 64]);
 	}
 }
 
@@ -379,12 +379,12 @@ static void qubit_rnd512_first(uint32_t *const __restrict__ statebuffer, uint32_
 	TWEAK(statechainv[20], statechainv[21], statechainv[22], statechainv[23], 2);
 	TWEAK(statechainv[28], statechainv[29], statechainv[30], statechainv[31], 3);
 	TWEAK(statechainv[36], statechainv[37], statechainv[38], statechainv[39], 4);
-
+	// (all the shifts instead of multiplication are on principal, not actual improvemnt :E
 	#pragma unroll 8
 	for (uint32_t i = 0; i<8; i++){
-		STEP2(&statechainv[ 0],*(uint2*)&c_CNS[(2 * i) +  0],*(uint2*)&c_CNS[(2 * i) + 16]);
-		STEP2(&statechainv[16],*(uint2*)&c_CNS[(2 * i) + 32],*(uint2*)&c_CNS[(2 * i) + 48]);
-		STEP1(&statechainv[32],*(uint2*)&c_CNS[(2 * i) + 64]);
+		STEP2(&statechainv[ 0],*(uint2*)&c_CNS[(i << 1) +  0],*(uint2*)&c_CNS[(i << 1) + 16]);
+		STEP2(&statechainv[16],*(uint2*)&c_CNS[(i << 1) + 32],*(uint2*)&c_CNS[(i << 1) + 48]);
+		STEP1(&statechainv[32],*(uint2*)&c_CNS[(i << 1) + 64]);
 	}
 }
 
@@ -401,7 +401,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 		t[i] = statechainv[i];
 		for (j = 1; j<5; j++)
 		{
-			t[i] ^= statechainv[i + 8 * j];
+			t[i] ^= statechainv[i + (j << 3)];
 		}
 	}
 
@@ -411,7 +411,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 	{
 		for (i = 0; i<8; i++)
 		{
-			statechainv[i + 8 * j] ^= t[i];
+			statechainv[i + (j << 3)] ^= t[i];
 		}
 	}
 
@@ -419,28 +419,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 	{
 		for (i = 0; i<8; i++)
 		{
-			t[i + 8 * j] = statechainv[i + 8 * j];
-		}
-	}
-
-	for (j = 0; j<5; j++)
-	{
-		MULT2(statechainv, j);
-	}
-
-	for (j = 0; j<5; j++)
-	{
-		for (i = 0; i<8; i++)
-		{
-			statechainv[8 * j + i] ^= t[8 * ((j + 1) % 5) + i];
-		}
-	}
-
-	for (j = 0; j<5; j++)
-	{
-		for (i = 0; i<8; i++)
-		{
-			t[i + 8 * j] = statechainv[i + 8 * j];
+			t[i + 8 * j] = statechainv[i + (j << 3)];
 		}
 	}
 
@@ -453,7 +432,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 	{
 		for (i = 0; i<8; i++)
 		{
-			statechainv[8 * j + i] ^= t[8 * ((j + 4) % 5) + i];
+			statechainv[(j << 3) + i] ^= t[(((j + 1) % 5) << 3) + i];
 		}
 	}
 
@@ -461,7 +440,28 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 	{
 		for (i = 0; i<8; i++)
 		{
-			statechainv[i + 8 * j] ^= statebuffer[i];
+			t[i + (j << 3)] = statechainv[i + (j << 3)];
+		}
+	}
+
+	for (j = 0; j<5; j++)
+	{
+		MULT2(statechainv, j);
+	}
+
+	for (j = 0; j<5; j++)
+	{
+		for (i = 0; i<8; i++)
+		{
+			statechainv[(j << 3) + i] ^= t[(((j + 4) % 5) << 3) + i];
+		}
+	}
+
+	for (j = 0; j<5; j++)
+	{
+		for (i = 0; i<8; i++)
+		{
+			statechainv[i + (j<<3)] ^= statebuffer[i];
 		}
 		MULT2(statebuffer, 0);
 	}
@@ -473,7 +473,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 
 	for (i = 0; i<8; i++)
 	{
-		STEP(h_CNS[(2 * i)], h_CNS[(2 * i) + 1]);
+		STEP(h_CNS[(2 * i)], h_CNS[(i<<1) + 1]);
 	}
 
 	for (i = 0; i<8; i++)
@@ -500,7 +500,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 
 	for (i = 0; i<8; i++)
 	{
-		STEP(h_CNS[(2 * i) + 32], h_CNS[(2 * i) + 32 + 1]);
+		STEP(h_CNS[(i<<1) + 32], h_CNS[(i<<1) + 32 + 1]);
 	}
 
 	for (i = 0; i<8; i++)
@@ -513,7 +513,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 
 	for (i = 0; i<8; i++)
 	{
-		STEP(h_CNS[(2 * i) + 48], h_CNS[(2 * i) + 48 + 1]);
+		STEP(h_CNS[(i<<1) + 48], h_CNS[(i<<1) + 48 + 1]);
 	}
 
 	for (i = 0; i<8; i++)
@@ -526,7 +526,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 
 	for (i = 0; i<8; i++)
 	{
-		STEP(h_CNS[(2 * i) + 64], h_CNS[(2 * i) + 64 + 1]);
+		STEP(h_CNS[(i<<1) + 64], h_CNS[(i<<1) + 64 + 1]);
 	}
 
 	for (i = 0; i<8; i++)
@@ -557,7 +557,7 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 //		#pragma unroll 8
 //		for(int i=0;i<8;i++)
 //			state[i+(j<<3)] ^= t[i];
-		*(uint2x4*)&state[8*j] ^= *(uint2x4*)t;
+		*(uint2x4*)&state[j<<3] ^= *(uint2x4*)t;
 	}
 	
 	#pragma unroll 5
@@ -565,7 +565,7 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 ///		#pragma unroll 8
 ///		for(int i=0;i<8;i++)
 //			t[i+(j<<3)] = state[i+(j<<3)];
-		*(uint2x4*)&t[8*j] = *(uint2x4*)&state[8*j];
+		*(uint2x4*)&t[j<<3] = *(uint2x4*)&state[j<<3];
 	}
 	#pragma unroll 5
 	for (int j = 0; j<5; j++) {
@@ -577,7 +577,7 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 //		#pragma unroll 8
 //		for(int i=0;i<8;i++)
 //			state[i+(j<<3)] ^= t[i + (((j + 1) % 5)<<3)];
-		*(uint2x4*)&state[8*j] ^= *(uint2x4*)&t[8 * ((j + 1) % 5)];
+		*(uint2x4*)&state[j<<3] ^= *(uint2x4*)&t[((j + 1) % 5)<<3];
 	}
 
 	#pragma unroll 5
@@ -585,7 +585,7 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 //		#pragma unroll 8
 //		for(int i=0;i<8;i++)
 //			t[i+8*j] = state[i+8*j];
-		*(uint2x4*)&t[8*j] = *(uint2x4*)&state[8*j];
+		*(uint2x4*)&t[j<<3] = *(uint2x4*)&state[j<<3];
 	}
 
 	#pragma unroll 5
@@ -597,7 +597,7 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 	for (int j = 0; j<5; j++) {
 		#pragma unroll 8
 		for(int i=0;i<8;i++)
-			state[i+8*j] ^= t[i+(8 * ((j + 4) % 5))];
+			state[i+(j<<3)] ^= t[i+(((j + 4) % 5)<<3)];
 //		*(uint2x4*)&state[8*j] ^= *(uint2x4*)&t[8 * ((j + 4) % 5)];
 	}
 
@@ -608,9 +608,9 @@ static void rnd512_nullhash(uint32_t *const __restrict__ state){
 	
 //	#pragma unroll 8
 	for (int i = 0; i<8; i++) {
-		STEP2(&state[ 0],*(uint2*)&c_CNS[(2 * i) +  0],*(uint2*)&c_CNS[(2 * i) + 16]);
-		STEP2(&state[16],*(uint2*)&c_CNS[(2 * i) + 32],*(uint2*)&c_CNS[(2 * i) + 48]);
-		STEP1(&state[32],*(uint2*)&c_CNS[(2 * i) + 64]);
+		STEP2(&state[ 0],*(uint2*)&c_CNS[(i<<1) +  0],*(uint2*)&c_CNS[(i<<1) + 16]);
+		STEP2(&state[16],*(uint2*)&c_CNS[(i<<1) + 32],*(uint2*)&c_CNS[(i<<1) + 48]);
+		STEP1(&state[32],*(uint2*)&c_CNS[(i<<1) + 64]);
 	}
 }
 
@@ -788,7 +788,7 @@ __host__ void qubit_cpu_precalc(int thr_id)
 		t[i] = statechainv[i];
 		for (int j = 1; j<5; j++)
 		{
-			t[i] ^= statechainv[i + 8 * j];
+			t[i] ^= statechainv[i + (j<<3)];
 		}
 	}
 
@@ -796,28 +796,12 @@ __host__ void qubit_cpu_precalc(int thr_id)
 
 	for (int j = 0; j<5; j++) {
 		for (int i = 0; i<8; i++) {
-			statechainv[i + 8 * j] ^= t[i];
+			statechainv[i + (j<<3)] ^= t[i];
 		}
 	}
 	for (j = 0; j<5; j++) {
 		for (i = 0; i<8; i++) {
-			t[i + 8 * j] = statechainv[i + 8 * j];
-		}
-	}
-
-	for (j = 0; j<5; j++) {
-		MULT2(statechainv, j);
-	}
-
-	for (j = 0; j<5; j++) {
-		for (i = 0; i<8; i++) {
-			statechainv[8 * j + i] ^= t[8 * ((j + 1) % 5) + i];
-		}
-	}
-
-	for (j = 0; j<5; j++) {
-		for (i = 0; i<8; i++) {
-			t[i + 8 * j] = statechainv[i + 8 * j];
+			t[i + (j<<3)] = statechainv[i + (j<<3)];
 		}
 	}
 
@@ -827,7 +811,23 @@ __host__ void qubit_cpu_precalc(int thr_id)
 
 	for (j = 0; j<5; j++) {
 		for (i = 0; i<8; i++) {
-			statechainv[8 * j + i] ^= t[8 * ((j + 4) % 5) + i];
+			statechainv[(j<<3) + i] ^= t[(((j + 1) % 5)<<3) + i];
+		}
+	}
+
+	for (j = 0; j<5; j++) {
+		for (i = 0; i<8; i++) {
+			t[i + (j<<3)] = statechainv[i + (j<<3)];
+		}
+	}
+
+	for (j = 0; j<5; j++) {
+		MULT2(statechainv, j);
+	}
+
+	for (j = 0; j<5; j++) {
+		for (i = 0; i<8; i++) {
+			statechainv[(j<<3) + i] ^= t[(((j + 4) % 5)<<3) + i];
 		}
 	}
 	cudaMemcpyToSymbolAsync(statebufferpre, statebuffer, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice, 0);

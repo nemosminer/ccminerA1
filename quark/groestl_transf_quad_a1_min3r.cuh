@@ -103,9 +103,11 @@ input[i].__X = __shfl((int)input[i].__X, n ^ (3 & -(n >= 1 && n <= 2)), 4);\
 */
 //input[i].__X = (__byte_perm(input[i].__X, 0, 0x1032) & (-(threadIdx.x & 1) | (-(threadIdx.x & 1) & input[i].__X));
 //other[i].__X = (__byte_perm(other[i].__X, 0, 0x1032) & (-(threadIdx.x & 1) | (-(threadIdx.x & 1) & input[i].__X));
+//input[i].__X = __shfl((int)input[i].__X, n ^ (3 & -(n >= 1 && n <= 2)), 4);
+
 #if 1
 #define UNROLL_SETS(__X) {\
-		input[i].__X = __shfl((int)input[i].__X, n ^ (3 & -(n >= 1 && n <= 2)), 4);\
+		input[i].__X = __shfl((int)input[i].__X, n ^ ((n >= 1 && n <= 2) | ((n >= 1 && n <= 2)<<1)), 4);\
 		other[i].__X = __shfl((int)input[i].__X, (threadIdx.x + 1) & 3, 4);\
 		input[i].__X = __shfl((int)input[i].__X, threadIdx.x & 2, 4);\
 		other[i].__X = __shfl((int)other[i].__X, threadIdx.x & 2, 4);\

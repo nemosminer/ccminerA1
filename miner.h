@@ -131,9 +131,15 @@ static inline bool is_x64(void) {
 #if ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
 #define WANT_BUILTIN_BSWAP
 #else
+/*
 #define bswap_32(x) ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u) \
                    | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
-#define bswap_64(x) (((uint64_t) bswap_32((uint32_t)((x) & 0xffffffffu)) << 32) \
+#define bswap_64(x) (((uint64_t) bswap_32((uint32_t)((x) & 0xffffffffull)) << 32) \
+                   | (uint64_t) bswap_32((uint32_t)((x) >> 32)))
+*/
+#define bswap_32(x) (((x) << 24) | (((x) << 8) & 0x00ff0000u) \
+                   | (((x) >> 8) & 0x0000ff00u) | ((uint32_t)(x) >> 24))
+#define bswap_64(x) (((uint64_t) bswap_32((uint32_t)((x) & 0xffffffffull)) << 32) \
                    | (uint64_t) bswap_32((uint32_t)((x) >> 32)))
 #endif
 

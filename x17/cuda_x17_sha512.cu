@@ -101,7 +101,7 @@ void x17_sha512_gpu_hash_64(const uint32_t threads, uint64_t *g_hash, volatile i
 	if (thread < threads)
 	{
 		const uint64_t hashPosition = thread;
-		uint64_t *pHash = &g_hash[hashPosition * 8U];
+		uint64_t *pHash = &g_hash[hashPosition << 3];
 
 		uint64_t W[80];
 #pragma unroll

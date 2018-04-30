@@ -510,7 +510,7 @@ void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t
 		}
 
 		// copy hash
-		uint32_t *outpHash = (uint32_t*)&g_hash[8 * hashPosition];
+		uint32_t *outpHash = (uint32_t*)&g_hash[hashPosition << 3];
 
 		#pragma unroll 16
 		for(int i=0;i<16;i++)

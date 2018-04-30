@@ -47,8 +47,17 @@ __device__ __forceinline__ void PERM_ELT(uint32_t &xa0,const uint32_t xa1,uint32
 		#else
 			tmp = (xb2 & ~xb3) ^ xm;
 		#endif
-		
-		xa0 = ((xa0 ^ xc ^ (ROTL32(xa1, 15) * 5U)) * 3U) ^ xb1 ^ tmp;
+
+//			xa0 = (((xa0 ^ xc ^ ((ROTL32(xa1, 15) << 2) + ROTL32(xa1, 15))) << 1) + (xa0 ^ xc ^ (ROTL32(xa1, 15) * 5U))) ^ xb1 ^ tmp;
+		uint32_t t1;
+
+		t1 = ROTL32(xa1, 15);
+		t1 = (t1 << 2) + t1;
+		t1 = (xa0 ^ xc ^ t1);
+		t1 = (t1 << 1) + t1;
+		xa0 = t1 ^ xb1 ^ tmp;
+
+//		xa0 = ((xa0 ^ xc ^ (ROTL32(xa1, 15) * 5U)) * 3U) ^ xb1 ^ tmp;
 		xb0 = xor3x(0xFFFFFFFF, xa0, ROTL32(xb0, 1));
 }
 

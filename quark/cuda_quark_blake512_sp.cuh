@@ -5,7 +5,9 @@
 #include "miner.h"
 
 // Should stay outside the ifdef on WIN64 (wtf)
-#include "cuda_vector_uint2x4.h"
+#include "cuda_vectors_alexis.h"
+#include "cuda_helper_alexis.h"
+//#include "cuda_vector_uint2x4.h"
 __constant__ static uint2 c_PaddedM[16];
 __constant__ static uint2x4 c_Hostprecalc[4];
 
@@ -14,13 +16,15 @@ __constant__ static uint2x4 c_Hostprecalc[4];
 #undef G
 #define vectorizelow(/* uint32_t*/ v) make_uint2(v,0)
 #define vectorizehigh(/*uint32_t*/ v) make_uint2(0,v)
-
+#define cuda_swap(v) cuda_swab64_U2(v)
+/*
 static __device__ __forceinline__ uint2 cuda_swap(uint2 v) {
 	const uint32_t t = cuda_swab32(v.x);
 	v.x = cuda_swab32(v.y);
 	v.y = t;
 	return v;
 }
+*/
 static __device__ __forceinline__ uint2 eorswap32(uint2 u, uint2 v) {
 	uint2 result;
 	result.y = u.x ^ v.x;
@@ -110,6 +114,15 @@ void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint2* g_hash, volatile int
 		outpt[1] = phash[1];
 
 		uint2 block[16];
+		block[0] = cuda_swap(msg[0]);
+		block[1] = cuda_swap(msg[1]);
+		block[2] = cuda_swap(msg[2]);
+		block[3] = cuda_swap(msg[3]);
+		block[4] = cuda_swap(msg[4]);
+		block[5] = cuda_swap(msg[5]);
+		block[6] = cuda_swap(msg[6]);
+		block[7] = cuda_swap(msg[7]);
+		/*
 		block[0].x = cuda_swab32(msg[0].y);
 		block[0].y = cuda_swab32(msg[0].x);
 		block[1].x = cuda_swab32(msg[1].y);
@@ -126,7 +139,7 @@ void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint2* g_hash, volatile int
 		block[6].y = cuda_swab32(msg[6].x);
 		block[7].x = cuda_swab32(msg[7].y);
 		block[7].y = cuda_swab32(msg[7].x);
-
+		*/
 		block[8] = vectorizehigh(0x80000000);
 		block[9] = vectorizelow(0x0);
 		block[10] = vectorizelow(0x0);
@@ -245,7 +258,8 @@ void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint2* g_hash, volatile int
 		Gprecalc(2, 7, 8, 13, 0xc, 0x3)
 		Gprecalc(3, 4, 9, 14, 0x0, 0xd)
 
-		#if __CUDA_ARCH__ == 500
+//		#if __CUDA_ARCH__ == 500
+#if 1 //__CUDA_ARCH__ >= 500
 
 		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
 		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
@@ -302,7 +316,6 @@ void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint2* g_hash, volatile int
 		Gprecalc(3, 4, 9, 14, 0x9, 0x1)
 
 		#else
-
 		for (int i = 0; i < 6; i++)
 		{
 			/* column step */
@@ -561,7 +574,7 @@ void quark_blake512_gpu_hash_80_sp(uint32_t threads, uint32_t startNounce, uint2
 		v[7] = cuda_swap(h[7] ^ v[7] ^ v[15]);
 
 		uint2x4 *phash = (uint2x4*)v;
-		outpt = (uint2x4*) &outputHash[thread * 8U];
+		outpt = (uint2x4*) &outputHash[thread << 3];
 		outpt[0] = phash[0];
 		outpt[1] = phash[1];
 	}
@@ -574,6 +587,7 @@ __host__ void quark_blake512_cpu_setBlock_80_sp(int thr_id, uint64_t *pdata)
 	uint64_t block[16];
 	uint64_t PaddedMessage[10];
 	uint64_t *peker = (uint64_t*) &PaddedMessage[0];
+#pragma unroll 10
 	for (int i = 0; i < 10; i++)
 		PaddedMessage[i] = cuda_swab64(pdata[i]);
 

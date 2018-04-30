@@ -82,7 +82,15 @@ typedef uint32_t sph_u32;
 		SWAP(BE, CE); \
 		SWAP(BF, CF); \
 		} while (0)
-
+#if 1
+#define PERM_ELT(xa0, xa1, xb0, xb1, xb2, xb3, xc, xm) do { \
+		uint32_t t1 = ((xa1 << 15) | (xa1 >> 17));			\
+			t1 = (t1 << 2) + t1;							\
+			t1 = ((xa0 ^ t1 ^ xc) << 1) + (xa0 ^ t1 ^ xc);	\
+			xa0 = T32(t1 ^ xb1 ^ (xb2 & ~xb3) ^ xm);		\
+			xb0 = T32(~(((xb0 << 1) | (xb0 >> 31)) ^ xa0)); \
+		} while (0)
+#else
 #define PERM_ELT(xa0, xa1, xb0, xb1, xb2, xb3, xc, xm) do { \
 		xa0 = T32((xa0 \
 			^ (((xa1 << 15) | (xa1 >> 17)) * 5U) \
@@ -90,7 +98,7 @@ typedef uint32_t sph_u32;
 			^ xb1 ^ (xb2 & ~xb3) ^ xm; \
 		xb0 = T32(~(((xb0 << 1) | (xb0 >> 31)) ^ xa0)); \
 		} while (0)
-
+#endif
 #define PERM_STEP_0 do { \
 		PERM_ELT(A00, A0B, B0, BD, B9, B6, C8, M0); \
 		PERM_ELT(A01, A00, B1, BE, BA, B7, C7, M1); \

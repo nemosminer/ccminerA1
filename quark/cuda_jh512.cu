@@ -300,7 +300,7 @@ void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, volatile 
 	{
 		//const uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 		const uint32_t hashPosition = thread;//= nounce - startNounce;
-		uint32_t *Hash = &g_hash[(size_t)16 * hashPosition];
+		uint32_t *Hash = &g_hash[hashPosition << 4];
 
 		uint32_t h[16];
 		AS_UINT4(&h[ 0]) = AS_UINT4(&Hash[ 0]);

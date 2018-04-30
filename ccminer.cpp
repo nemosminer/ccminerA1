@@ -1803,7 +1803,7 @@ void restart_threads(void)
 {
 	if (opt_debug && !opt_quiet)
 		applog(LOG_DEBUG, "%s", __FUNCTION__);
-	gettimeofday(&g_tv_start, NULL);
+//	gettimeofday(&g_tv_start, NULL);
 	// restart mining thread IRL
 #if 0
 //	pthread_mutex_lock(&ark_lock);
@@ -2550,16 +2550,16 @@ static void *miner_thread(void *userdata)
 			//			if (work_restart[thr_id].restart)
 			//			work_done = 1;
 			//			gpulog(LOG_NOTICE, thr_id, "Restart thread");
-			gettimeofday(&tv_end, NULL);
-			timeval_subtract(&diff, &tv_end, &g_tv_start);
+//			gettimeofday(&tv_end, NULL);
+//			timeval_subtract(&diff, &tv_end, &g_tv_start);
 			if (cgpu && diff.tv_sec) { // stop monitoring
 				cgpu->monitor.sampling_flag = false;
 			}
-			if (!thr_id && (diff.tv_usec || diff.tv_sec))
-			{
-				double dtime = (double)diff.tv_sec + 1e-6 * diff.tv_usec;
-				gpulog(LOG_INFO, thr_id, "Job switch (%f)", dtime);
-			}
+//			if (!thr_id && (diff.tv_usec || diff.tv_sec))
+//			{
+//				double dtime = (double)diff.tv_sec + 1e-6 * diff.tv_usec;
+//				gpulog(LOG_INFO, thr_id, "Job switch (%f)", dtime);
+//			}
 //			if (g_work_time)
 				work_done = 1;
 			continue;

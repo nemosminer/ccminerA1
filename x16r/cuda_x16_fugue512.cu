@@ -340,7 +340,7 @@ void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce,
 
 		#pragma unroll
 		for(int i = 0; i < 10; i++)
-			AS_UINT2(&Data[i * 2]) = AS_UINT2(&c_PaddedMessage80[i]);
+			AS_UINT2(&Data[i<<1]) = AS_UINT2(&c_PaddedMessage80[i]);
 		Data[19] = (startNonce + thread);
 
 		uint32_t S00, S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11;
@@ -433,7 +433,7 @@ void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce,
 		uint64_t* pHash = &g_hash[hashPosition << 3];
 		#pragma unroll 4
 		for(int i = 0; i < 4; i++)
-			AS_UINT4(&pHash[i * 2]) = AS_UINT4(&Data[i * 4]);
+			AS_UINT4(&pHash[i<<1]) = AS_UINT4(&Data[i<<2]);
 	}
 }
 

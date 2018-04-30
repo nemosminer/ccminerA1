@@ -24,7 +24,7 @@
 #include "groestl_transf_quad.h"
 #include "groestl_transf_quad_a1_min3r.cuh"
 #endif
-
+ 
 #define WANT_GROESTL80
 #ifdef WANT_GROESTL80
 __constant__ static uint32_t c_Message80[20];
@@ -116,7 +116,10 @@ void quark_groestl512_gpu_hash_64_quad_a1_min3r(const uint32_t threads, uint4* g
 		message[1].x = (0x80 & (thr-1));
 		message[1].y = 0;
 		message[1].z = 0;
-		message[1].w = 0x01000000 & -(thr == 3);
+		//0x4
+		//0x4444442
+		//0x100-0000 
+		message[1].w = 0x01000000 & -(thr == 3); //& ((thr + 1) << 16);//doesn't work?
 
 //		message[1].x = 0;
 //		message[1].y = 0;

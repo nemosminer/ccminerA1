@@ -245,6 +245,8 @@ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_output
 	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500)
 		quark_blake512_cpu_hash_64_sp(thr_id, threads, d_outputHash, order);
 	else
+#else
+#warning "older kernel not optimized properly"
 #endif
 	{
 		const uint32_t threadsperblock = 256;

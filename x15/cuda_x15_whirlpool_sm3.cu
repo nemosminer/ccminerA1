@@ -2091,7 +2091,7 @@ void oldwhirlpool_gpu_hash_80(const uint32_t threads, const uint32_t startNounce
 		state[6] = xor1(state[6], n[6]);
 		state[7] = xor3(state[7], n[7], 0x8002000000000000);
 
-		uint64_t* outHash = &(((uint64_t*)outputHash)[(size_t)8 * thread]);
+		uint64_t* outHash = &(((uint64_t*)outputHash)[thread << 3]);
 		#pragma unroll 8
 		for (unsigned i = 0; i < 8; i++)
 			outHash[i] = state[i];
