@@ -450,17 +450,17 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 
 //		CUDA_SAFE_CALL(cudaMalloc(&d_ark[thr_id], sizeof(int)));
 		*h_ark[thr_id] = 0;
-//		if (thr_id == 0)
+		if (thr_id == 0)
 		{
 //			CUDA_SAFE_CALL(cudaStreamCreate(&streamx[0]));
 //			CUDA_SAFE_CALL(cudaStreamCreate(&streamk[0]));
 //			CUDA_SAFE_CALL(cudaStreamCreateWithPriority(&streamk[0], 0, 0));
-			CUDA_SAFE_CALL(cudaStreamCreateWithPriority(&streamx[thr_id], cudaStreamNonBlocking, -1));
+			CUDA_SAFE_CALL(cudaStreamCreateWithPriority(&streamx[0], cudaStreamNonBlocking, -1));
 		}
-//		else
+		else
 		{
-//			while (h_ark[0] == NULL)
-//				sleep(1);
+			while (h_ark[0] == NULL)
+				sleep(1);
 		}
 //		set_lo << <1, 1 >> >(d_ark[thr_id]);
 		CUDA_SAFE_CALL(cudaMemcpy(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int)*16, cudaMemcpyHostToDevice));
@@ -856,7 +856,7 @@ extern "C" void free_x16r(int thr_id)
 //	ark_reset(thr_id);
 	cudaFree(d_hash[thr_id]);
 //	cudaStreamDestroy(streamk[0]);
-	cudaStreamDestroy(streamx[thr_id]);
+	cudaStreamDestroy(streamx[0]);
 
 	quark_blake512_cpu_free(thr_id);
 	quark_groestl512_cpu_free(thr_id);
@@ -914,7 +914,7 @@ __host__ void ark_switch(int thr_id)
 		{
 			*h_ark[thr_id] = 1;
 #ifdef A1MIN3R_MOD
-			CUDA_SAFE_CALL(cudaMemsetAsync(d_ark[thr_id], 1, 1, streamx[thr_id]));
+			CUDA_SAFE_CALL(cudaMemsetAsync(d_ark[thr_id], 1, 1, streamx[0]));
 //			CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamx[0]));
 #endif
 		}
@@ -939,7 +939,7 @@ __host__ int ark_reset(int thr_id)
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[thr_id]));
 		*h_ark[thr_id] = 0;
 #ifdef A1MIN3R_MOD
-		CUDA_SAFE_CALL(cudaMemsetAsync(d_ark[thr_id], 0, 1, 0));
+		CUDA_SAFE_CALL(cudaMemsetAsync(d_ark[thr_id], 0, 1, streamx[0]));
 //		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, 0));
 #endif
 		return 1;
