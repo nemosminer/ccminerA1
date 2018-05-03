@@ -48,7 +48,7 @@ cudaStream_t streamk[MAX_GPUS];
 
 #define GPU_HASH_CHECK_LOG 0
 static uint32_t *d_hash[MAX_GPUS];
-static int *d_ark[MAX_GPUS];
+int *d_ark[MAX_GPUS];
 
 enum Algo {
 	BLAKE = 0,
@@ -914,6 +914,7 @@ __host__ void ark_switch(int thr_id)
 		{
 			*h_ark[thr_id] = 1;
 #ifdef A1MIN3R_MOD
+			cudaGetLastError();
 			CUDA_SAFE_CALL(cudaMemsetAsync(d_ark[thr_id], 1, 1, streamx[thr_id]));
 //			CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, streamx[0]));
 #endif
@@ -939,6 +940,7 @@ __host__ int ark_reset(int thr_id)
 //		CUDA_SAFE_CALL(cudaMemcpyToSymbolAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), 0, cudaMemcpyHostToDevice, streamx[thr_id]));
 		*h_ark[thr_id] = 0;
 #ifdef A1MIN3R_MOD
+		cudaGetLastError();
 		CUDA_SAFE_CALL(cudaMemsetAsync(d_ark[thr_id], 0, 1, streamx[thr_id]));
 //		CUDA_SAFE_CALL(cudaMemcpyAsync(d_ark[thr_id], (int*)h_ark[thr_id], sizeof(int), cudaMemcpyHostToDevice, 0));
 #endif
