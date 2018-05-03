@@ -428,7 +428,8 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		}
 
 		max_throughput = throughput;
-
+		if (max_throughput > (3 << 22))
+			throughput = 3 << 22;
 		while (cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput) != cudaSuccess)
 		{
 			throughput >>= 1;

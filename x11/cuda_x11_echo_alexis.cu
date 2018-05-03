@@ -346,8 +346,12 @@ static void x11_echo512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, v
 			uint32_t t =  (ab & 0x80808080);
 			uint32_t t2 = (bc & 0x80808080);
 			uint32_t t3 = (cd & 0x80808080);
-
+			/*
 			uint32_t abx = (t  >> 7) * 27U ^ ((ab^t) << 1);
+			uint32_t bcx = (t2 >> 7) * 27U ^ ((bc^t2) << 1);
+			uint32_t cdx = (t3 >> 7) * 27U ^ ((cd^t3) << 1);
+			*/
+			uint32_t abx = (t >> 7) * 27U ^ ((ab^t) << 1);
 			uint32_t bcx = (t2 >> 7) * 27U ^ ((bc^t2) << 1);
 			uint32_t cdx = (t3 >> 7) * 27U ^ ((cd^t3) << 1);
 
