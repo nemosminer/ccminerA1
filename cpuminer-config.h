@@ -162,16 +162,16 @@
 #define PACKAGE_NAME "ccminer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "ccminer 1.6.6-dev"
+#define PACKAGE_STRING "ccminerA1"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "ccminer"
+#define PACKAGE_TARNAME "ccminerA1"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL "http://github.com/tpruvot/ccminer"
+#define PACKAGE_URL "http://github.com/nemosminer/ccminerA1"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.6.6-dev"
+#define PACKAGE_VERSION "A1-x16r-x16s"
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -185,7 +185,7 @@
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "1.6.6-dev"
+#define VERSION "A1"
 
 /* Define curl_free() as free() if our version of curl lacks curl_free. */
 /* #undef curl_free */
