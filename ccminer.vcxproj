@@ -448,7 +448,7 @@
     </CudaCompile>
     <CudaCompile Include="x15\cuda_x14_shabal512_alexis.cu" />
     <CudaCompile Include="x15\cuda_x15_whirlpool_sm3.cu" />
-    <CudaCompile Include="x16r\x16r.cu">
+    <CudaCompile Include="x16r\x16.cu">
       <AdditionalCompilerOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
       </AdditionalCompilerOptions>
       <AdditionalCompilerOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

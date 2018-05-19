@@ -886,9 +886,6 @@
     <CudaCompile Include="x16r\cuda_x16_simd512_80.cu">
       <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>
-    <CudaCompile Include="x16r\x16r.cu">
-      <Filter>Source Files\CUDA\x16r</Filter>
-    </CudaCompile>
     <CudaCompile Include="qubit\qubit_luffa512_alexis.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
     </CudaCompile>
@@ -905,6 +902,9 @@
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_hamsi512_alexis.cu" />
+    <CudaCompile Include="x16r\x16.cu">
+      <Filter>Source Files\CUDA\x16r</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico">

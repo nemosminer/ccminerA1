@@ -311,6 +311,7 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x16r        X16R (Raven)\n\
+			x16s        X16S \n\
 			x17         X17\n\
 			wildkeccak  Boolberry\n\
 			zr5         ZR5 (ZiftrCoin)\n\
@@ -1766,6 +1767,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 //		case ALGO_TIMETRAVEL:
 //		case ALGO_BITCORE:
 		case ALGO_X16R:
+		case ALGO_X16S:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 #if 0
@@ -2244,7 +2246,7 @@ static void *miner_thread(void *userdata)
 
 		// prevent gpu scans before a job is received
 		nodata_check_oft = 0;
-		if (opt_algo == ALGO_X16R && max_nonce == 0 && init_items[thr_id] == 0)
+		if ((opt_algo == ALGO_X16R || opt_algo == ALGO_X16S)&& max_nonce == 0 && init_items[thr_id] == 0)
 		{
 			if (x16r_init(thr_id, -1) != -128)
 				exit(-1);
@@ -2502,6 +2504,20 @@ static void *miner_thread(void *userdata)
 
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
+		case ALGO_X16S:
+			rc = scanhash_x16s(thr_id, &work, max_nonce, &hashes_done, opt_seq);
+			if (rc == -128)
+			{
+				if (opt_time_limit > 0)
+				{
+					rc = scanhash_x16s(thr_id, &work, max_nonce, &hashes_done, ~0ULL);
+				}
+				else
+					rc = scanhash_x16s(thr_id, &work, 1 << 28, &hashes_done, opt_seq);
+			}
+			if (rc < 0 && (hashes_done > nonceptr[0] - max_nonce || hashes_done == 0))
+				hashes_done = nonceptr[0] - max_nonce;
+			break;
 		case ALGO_X16R:
 //			try{
 //			ark_reset(thr_id);
