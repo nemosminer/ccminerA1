@@ -3982,13 +3982,10 @@ int main(int argc, char *argv[])
 	// get opt_quiet early
 	parse_single_opt('q', argc, argv);
 
-	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by a1i3nj03@github ***\n");
+	printf("*** " PACKAGE_VERSION " for nVidia GPUs by a1i3nj03@github ***\n");
 	printf("*** optimized ccminer based on versions by tpruvot@github ***\n");
 	printf("*** optimized ccminer-x16r-x16s compiled by nemosminer@github ***\n");
-                   "(Credit to http://www.asciiworld.com/-Aliens,128-.html )\n");
-#else
-		);
-#endif
+
 	if (!opt_quiet) {
 		const char* arch = is_x64() ? "64-bits" : "32-bits";
 #ifdef _MSC_VER
@@ -3997,8 +3994,8 @@ int main(int argc, char *argv[])
 		printf("    Built with the nVidia CUDA Toolkit %d.%d %s\n\n",
 #endif
 			CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10, arch);
-		printf("  Originally based on Christian Buchner and Christian H. project\n"
-				"  Include some kernels from alexis78, djm34, djEzo, tsiv and krnlx.\n\n");
+		printf("  Originally based on Christian Buchner and Christian H. project\n");
+		printf("  Include some work from a1i3nj03, alexis78, djm34, djEzo, tsiv and krnlx.\n\n");
 	}
 
 	rpc_user = strdup("");
